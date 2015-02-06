@@ -388,6 +388,7 @@ int main(int argc, char *argv[])
     int lifetime = 300;
     int batterylevelchanging = 1;
     time_t reboot_time = 0;
+    char bootstrapRequested[6];
 
     /*
      * The function start by setting up the command line interface (which may or not be useful depending on your project)
@@ -418,6 +419,7 @@ int main(int argc, char *argv[])
     if (argc >= 5) name = argv[4];
     if (argc >= 6) sscanf(argv[5], "%d", &lifetime);
     if (argc >= 7) batterylevelchanging = argv[6][0] == '1' ? 1 : 0;
+    if (argc >= 8) strcpy (bootstrapRequested, argv[4]);
 
     /*
      *This call an internal function that create an IPV6 socket on the port 5683.
@@ -464,8 +466,8 @@ int main(int argc, char *argv[])
     }
 
     char serverUri[50];
-    sprintf(serverUri, "coap://%s:%s", server, serverPort);
-    objArray[4] = get_security_object(serverId, serverUri, false);
+    sprintf (serverUri, "coap://%s:%s", server, serverPort);
+    objArray[4] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
     if (NULL == objArray[4])
     {
         fprintf(stderr, "Failed to create security object\r\n");
@@ -497,6 +499,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "lwm2m_init() failed\r\n");
         return -1;
     }
+    if (strcmp(bootstrapRequested, "true") == 0)
+    {
+        lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+    }
 
     /*
      * We configure the liblwm2m library with the name of the client - which shall be unique for each client -
@@ -517,7 +523,7 @@ int main(int argc, char *argv[])
     result = lwm2m_start(lwm2mH);
     if (result != 0)
     {
-        fprintf(stderr, "lwm2m_register() failed: 0x%X\r\n", result);
+        fprintf(stderr, "lwm2m_start() failed: 0x%X\r\n", result);
         return -1;
     }
 
@@ -607,7 +613,7 @@ int main(int argc, char *argv[])
             int numBytes;
 
             /*
-             * If an event happen on the socket
+             * If an event happens on the socket
              */
             if (FD_ISSET(data.sock, &readfds))
             {
@@ -643,7 +649,7 @@ int main(int argc, char *argv[])
                         inet_ntop(saddr->sin6_family, &saddr->sin6_addr, s, INET6_ADDRSTRLEN);
                         port = saddr->sin6_port;
                     }
-                    fprintf(stderr, "%d bytes received from [%s]:%hu\r\n", numBytes, s, port);
+                    fprintf(stderr, "\r\n%d bytes received from [%s]:%hu\r\n", numBytes, s, port);
 
                     /*
                      * Display it in the STDERR

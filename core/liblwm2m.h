@@ -320,7 +320,12 @@ typedef enum
     STATE_REGISTERED,         // successfully registered
     STATE_REG_FAILED,         // last registration failed
     STATE_REG_UPDATE_PENDING, // registration update pending
-    STATE_DEREG_PENDING       // deregistration pending
+    STATE_DEREG_PENDING,      // deregistration pending
+    STATE_NOT_BOOTSTRAPED,
+    STATE_BOOTSTRAP_REQUESTED,
+    STATE_BOOTSTRAP_PENDING,
+    STATE_BOOTSTRAP_FAILED,
+    STATE_BOOTSTRAPED
 } lwm2m_status_t;
 
 typedef enum
@@ -453,7 +458,6 @@ typedef struct _lwm2m_watcher_
 } lwm2m_watcher_t;
 
 typedef struct _lwm2m_observed_
-
 {
     struct _lwm2m_observed_ * next;
 
@@ -462,8 +466,11 @@ typedef struct _lwm2m_observed_
 } lwm2m_observed_t;
 
 typedef enum {
-    BOOTSTRAPED = 0,
-    BOOTSTRAPING
+    NOT_BOOTSTRAPED = 0,
+    BOOTSTRAP_REQUESTED,
+    BOOTSTRAP_PENDING,
+    BOOTSTRAP_FAILED,
+    BOOTSTRAPED
 } lwm2m_bootstrap_state_t;
 
 /*
@@ -521,6 +528,9 @@ int lwm2m_configure(lwm2m_context_t * contextP, char * endpointName, char * msis
 
 // create objects for known LWM2M Servers.
 int lwm2m_start(lwm2m_context_t * contextP);
+
+// initiate a bootstrap session
+int lwm2m_bootstrap(lwm2m_context_t * contextP);
 
 // check if the server registrations are outdated and needs to be renewed
 int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP);

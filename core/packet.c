@@ -110,23 +110,32 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
 
     uriP = lwm2m_decode_uri(message->uri_path);
     if (uriP == NULL) return BAD_REQUEST_4_00;
+    
+    LOG("    Uri flag: %u, objectId: %u, instanceId:%u, resourceId:%u\r\n", uriP->flag, uriP->objectId, uriP->instanceId, uriP->resourceId);
 
     switch(uriP->flag & LWM2M_URI_MASK_TYPE)
     {
 #ifdef LWM2M_CLIENT_MODE
     case LWM2M_URI_FLAG_DM:
         // TODO: Authentify server
+        LOG("    Flag DM\r\n");
         result = handle_dm_request(contextP, uriP, fromSessionH, message, response);
         break;
 
     case LWM2M_URI_FLAG_BOOTSTRAP:
+        LOG("    Flag Bootstrap\r\n");
         result = NOT_IMPLEMENTED_5_01;
         break;
 #endif
 
 #ifdef LWM2M_SERVER_MODE
-   case LWM2M_URI_FLAG_REGISTRATION:
+    case LWM2M_URI_FLAG_REGISTRATION:
         result = handle_registration_request(contextP, uriP, fromSessionH, message, response);
+        break;
+
+    case LWM2M_URI_FLAG_BOOTSTRAP:
+        LOG("Client initiated bootstrap. Not implemented.\r\n");
+        result = NOT_IMPLEMENTED_5_01;
         break;
 #endif
     default:
@@ -134,6 +143,7 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
         break;
     }
 
+    LOG("    Result: %d.%.2d\r\n", result >> 5, result & 0x1F);
     coap_set_status_code(response, result);
 
     if (result < BAD_REQUEST_4_00)
@@ -157,11 +167,19 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
     coap_status_t coap_error_code = NO_ERROR;
     static coap_packet_t message[1];
     static coap_packet_t response[1];
+    char code_as_string[5];
 
     coap_error_code = coap_parse_message(message, buffer, (uint16_t)length);
     if (coap_error_code == NO_ERROR)
     {
-        LOG("  Parsed: ver %u, type %u, tkl %u, code %u, mid %u\r\n", message->version, message->type, message->token_len, message->code, message->mid);
+        if (message->code >= COAP_GET && message->code <= COAP_DELETE)
+        {
+            LOG("  Parsed: ver %u, type %u, tkl %u, code %u, mid %u\r\n", message->version, message->type, message->token_len, message->code, message->mid);
+        }
+        else
+        {
+            LOG("  Parsed: ver %u, type %u, tkl %u, code %u.%.2u, mid %u\r\n", message->version, message->type, message->token_len, message->code >> 5, message->code & 0x1F, message->mid);
+        }
         LOG("  Payload: %.*s\r\n\n", message->payload_len, message->payload);
 
         if (message->code >= COAP_GET && message->code <= COAP_DELETE)
@@ -171,6 +189,15 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
             uint32_t block_offset = 0;
             int32_t new_offset = 0;
 
+#ifdef LWM2M_CLIENT_MODE
+            switch (message->code)
+            {
+                case COAP_DELETE: LOG("    => Received DELETE\n"); break;
+                case COAP_POST:   LOG("    => Received POST\n");   break;
+                case COAP_PUT:    LOG("    => Received PUT\n");    break;
+                default:                                       break;
+            }
+#endif
             /* prepare response */
             if (message->type == COAP_TYPE_CON)
             {
