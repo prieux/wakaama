@@ -63,7 +63,8 @@ static lwm2m_object_t * prv_find_object(lwm2m_context_t * contextP,
 {
     int i;
 
-    if (Id == LWM2M_SECURITY_OBJECT_ID) return NULL;
+    LOG("    Bootstrap state: %u\r\n", contextP->bsState);
+    if ((contextP->bsState != BOOTSTRAP_PENDING) && (Id == LWM2M_SECURITY_OBJECT_ID)) return NULL;
 
     for (i = 0 ; i < contextP->numObject ; i++)
     {
@@ -195,7 +196,11 @@ coap_status_t object_write(lwm2m_context_t * contextP,
     int size = 0;
 
     targetP = prv_find_object(contextP, uriP->objectId);
-    if (NULL == targetP) return NOT_FOUND_4_04;
+    if (NULL == targetP)
+    {
+        LOG("    Object with objectId: %u not found\r\n", uriP->objectId);
+        return NOT_FOUND_4_04;
+    }
     if (NULL == targetP->writeFunc) return METHOD_NOT_ALLOWED_4_05;
 
     if (LWM2M_URI_IS_SET_RESOURCE(uriP))

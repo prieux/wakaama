@@ -321,7 +321,8 @@ int main(int argc, char *argv[])
     lwm2m_context_t * lwm2mH = NULL;
     lwm2m_object_t * objArray[OBJ_COUNT];
     int i;
-    char localPort[7], server[30], serverPort[7];
+    char localPort[7], server[30], serverPort[7], bootstrapRequested[6];
+    
     /*
      * The function start by setting up the command line interface (which may or not be useful depending on your project)
      *
@@ -345,13 +346,15 @@ int main(int argc, char *argv[])
 
     memset(&data, 0, sizeof(client_data_t));
 
-    strcpy (localPort, "56830");
-    strcpy (server,"localhost");
-    strcpy (serverPort, LWM2M_STANDARD_PORT_STR);	//see connection.h
+    strcpy(localPort, "56830");
+    strcpy(server,"localhost");
+    strcpy(serverPort, LWM2M_STANDARD_PORT_STR);	//see connection.h
+    strcpy(bootstrapRequested, "false");
 
-    if (argc >= 2) strcpy (localPort,  argv[1]);
-    if (argc >= 3) strcpy (server,     argv[2]);
+    if (argc >= 2) strcpy (localPort, argv[1]);
+    if (argc >= 3) strcpy (server, argv[2]);
     if (argc >= 4) strcpy (serverPort, argv[3]);
+    if (argc >= 5) strcpy (bootstrapRequested, argv[4]);
 
     /*
      *This call an internal function that create an IPV6 socket on the port 5683.
@@ -399,7 +402,7 @@ int main(int argc, char *argv[])
 
     char serverUri[50];
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
-    objArray[4] = get_security_object(serverId, serverUri, false);
+    objArray[4] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
     if (NULL == objArray[4])
     {
         fprintf(stderr, "Failed to create security object\r\n");
@@ -424,6 +427,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "lwm2m_init() failed\r\n");
         return -1;
     }
+    if (strcmp(bootstrapRequested, "true") == 0)
+    {
+        lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+    }
 
     /*
      * We configure the liblwm2m library with the name of the client - which shall be unique for each client -
@@ -444,7 +451,7 @@ int main(int argc, char *argv[])
     result = lwm2m_start(lwm2mH);
     if (result != 0)
     {
-        fprintf(stderr, "lwm2m_register() failed: 0x%X\r\n", result);
+        fprintf(stderr, "lwm2m_start() failed: 0x%X\r\n", result);
         return -1;
     }
 
@@ -505,7 +512,7 @@ int main(int argc, char *argv[])
             int numBytes;
 
             /*
-             * If an event happen on the socket
+             * If an event happens on the socket
              */
             if (FD_ISSET(data.sock, &readfds))
             {
@@ -528,7 +535,7 @@ int main(int argc, char *argv[])
                     char s[INET6_ADDRSTRLEN];
                     connection_t * connP;
 
-                    fprintf(stderr, "%d bytes received from [%s]:%hu\r\n",
+                    fprintf(stderr, "\r\n\n%d bytes received from [%s]:%hu\r\n",
                             numBytes,
                             inet_ntop(addr.ss_family,
                                       &(((struct sockaddr_in6*)&addr)->sin6_addr),

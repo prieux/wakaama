@@ -57,14 +57,23 @@
 #define LWM2M_SECURITY_SHORT_SERVER_ID        10
 #define LWM2M_SECURITY_HOLD_OFF_ID            11
 
-
+/* typedef enum
+{
+    STATE_NOT_BOOTSTRAPED = 0,
+    STATE_BOOTSTRAP_REQUESTED,
+    STATE_BOOTSTRAP_PENDING,
+    STATE_BOOTSTRAP_FAILED,
+    STATE_BOOTSTRAPED
+} lwm2m_bootstrap_status_t;
+ */
 typedef struct _security_instance_
 {
     struct _server_instance_ * next;        // matches lwm2m_list_t::next
     uint16_t                   instanceId;  // matches lwm2m_list_t::id
-    char *                  uri;
-    bool                    isBootstrap;
-    uint16_t                shortID;
+    char *                     uri;
+    bool                       isBootstrap;
+    uint16_t                   shortID;
+    //lwm2m_bootstrap_status_t   bsStatus;
 } security_instance_t;
 
 static uint8_t prv_get_value(lwm2m_tlv_t * tlvP,
