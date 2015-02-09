@@ -321,11 +321,7 @@ typedef enum
     STATE_REG_FAILED,         // last registration failed
     STATE_REG_UPDATE_PENDING, // registration update pending
     STATE_DEREG_PENDING,      // deregistration pending
-    STATE_NOT_BOOTSTRAPED,
-    STATE_BOOTSTRAP_REQUESTED,
-    STATE_BOOTSTRAP_PENDING,
-    STATE_BOOTSTRAP_FAILED,
-    STATE_BOOTSTRAPED
+    STATE_NOT_BOOTSTRAPED
 } lwm2m_status_t;
 
 typedef enum
@@ -468,6 +464,7 @@ typedef struct _lwm2m_observed_
 typedef enum {
     NOT_BOOTSTRAPED = 0,
     BOOTSTRAP_REQUESTED,
+    BOOTSTRAP_INITIATED,
     BOOTSTRAP_PENDING,
     BOOTSTRAP_FAILED,
     BOOTSTRAPED
@@ -493,6 +490,7 @@ typedef struct
     lwm2m_server_t *    bootstrapServerList;
     lwm2m_server_t *    serverList;
     lwm2m_object_t **   objectList;
+    lwm2m_object_t **   objectListBackup;
     uint16_t            numObject;
     lwm2m_observed_t *  observedList;
 #endif

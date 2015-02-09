@@ -135,6 +135,9 @@ coap_status_t message_send(lwm2m_context_t * contextP, coap_packet_t * message, 
 void handle_observe_notify(lwm2m_context_t * contextP, void * fromSessionH, coap_packet_t * message);
 void observation_remove(lwm2m_client_t * clientP, lwm2m_observation_t * observationP);
 
+// defined in bootstrap.c
+void handle_bootstrap(lwm2m_context_t * contextP, coap_packet_t * message, void * fromSessionH);
+
 // defined in utils.c
 lwm2m_binding_t lwm2m_stringToBinding(uint8_t *buffer, size_t length);
 

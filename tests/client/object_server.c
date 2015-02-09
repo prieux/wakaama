@@ -35,10 +35,10 @@
 
 #include "liblwm2m.h"
 #include "lwm2mclient.h"
+#include "internals.h"
 
 #include <stdlib.h>
 #include <string.h>
-
 
 typedef struct _server_instance_
 {
@@ -154,6 +154,7 @@ static uint8_t prv_server_write(uint16_t instanceId,
         switch (dataArray[i].id)
         {
         case LWM2M_SERVER_SHORT_ID_ID:
+            LOG("    >>>> server is not allowed to write short ID\r\n");
             result = COAP_405_METHOD_NOT_ALLOWED;
             break;
 
