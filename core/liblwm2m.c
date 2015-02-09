@@ -297,7 +297,7 @@ int lwm2m_step(lwm2m_context_t * contextP,
     lwm2m_update_registrations(contextP, tv.tv_sec, timeoutP);
     if (contextP->bsState == BOOTSTRAP_REQUESTED)
     {
-        contextP->bsState = BOOTSTRAP_PENDING;
+        contextP->bsState = BOOTSTRAP_INITIATED;
         lwm2m_bootstrap(contextP);
     }
 #endif

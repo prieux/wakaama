@@ -79,7 +79,7 @@ static void prv_handleBootstrapReply(lwm2m_transaction_t * transacP, void * mess
     char code_as_string[5];
     lwm2m_server_t * targetP;
     
-    LOG("Handling bootstrap reply...\r\n");
+    LOG("    Handling bootstrap reply...\r\n");
     targetP = (lwm2m_server_t *)(transacP->peerP);
     LOG("    Server status: %d\r\n", targetP->status);
     coap_packet_t * packet = (coap_packet_t *)message;
@@ -107,7 +107,7 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
     lwm2m_server_t * bootstrapServer = contextP->bootstrapServerList;
     if (bootstrapServer != NULL)
     {
-        LOG("Bootstrap server found\r\n");
+        LOG("\r\nBootstrap server found\r\n");
         if (bootstrapServer->sessionH == NULL)
         {
             bootstrapServer->sessionH = contextP->connectCallback(bootstrapServer->shortID, contextP->userData);
@@ -128,9 +128,8 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
             if (transaction_send(contextP, transaction) == 0)
             {
                 bootstrapServer->mid = transaction->mID;
-                bootstrapServer->status = STATE_BOOTSTRAP_PENDING;
+                LOG("DI bootstrap requested to BS server\r\n");
             }
-            LOG("Bootstrap launched\r\n");
         }
         else
         {
@@ -138,6 +137,25 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
         }
     }
     return 0;
+}
+
+void handle_bootstrap(lwm2m_context_t * contextP,
+                      coap_packet_t * message,
+                      void * fromSessionH)
+{
+    if (COAP_204_CHANGED == message->code) {
+        contextP->bsState = BOOTSTRAP_PENDING;
+        LOG("    Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
+        /*
+         * TODO: starting here, we'll need to archive the object configuration in case of network or
+         * botstrap server failure
+         */
+    }
+    else
+    {
+        contextP->bsState = BOOTSTRAP_FAILED;
+        LOG("    Bootstrap failed\r\n");
+    }
 }
 
 #endif

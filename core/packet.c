@@ -100,6 +100,15 @@ static void handle_reset(lwm2m_context_t * contextP,
 #endif
 }
 
+static void handle_ack(lwm2m_context_t * contextP,
+                         void * fromSessionH,
+                         coap_packet_t * message)
+{
+#ifdef LWM2M_CLIENT_MODE
+    handle_bootstrap(contextP, message, fromSessionH);
+#endif
+}
+
 static coap_status_t handle_request(lwm2m_context_t * contextP,
                                     void * fromSessionH,
                                     coap_packet_t * message,
@@ -192,10 +201,11 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
 #ifdef LWM2M_CLIENT_MODE
             switch (message->code)
             {
+                case COAP_GET:    LOG("    => Received GET\n");    break;
                 case COAP_DELETE: LOG("    => Received DELETE\n"); break;
                 case COAP_POST:   LOG("    => Received POST\n");   break;
                 case COAP_PUT:    LOG("    => Received PUT\n");    break;
-                default:                                       break;
+                default:                                           break;
             }
 #endif
             /* prepare response */
@@ -289,6 +299,7 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
             if (message->type==COAP_TYPE_ACK)
             {
                 LOG("Received ACK\n");
+                handle_ack(contextP, fromSessionH, message);
             }
             else if (message->type==COAP_TYPE_RST)
             {

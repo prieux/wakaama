@@ -311,6 +311,12 @@ syntax_error:
     fprintf(stdout, "Syntax error !\n");
 }
 
+static void prv_initiate_bootstrap(char * buffer,
+                                   void * user_data)
+{
+    lwm2m_context_t * lwm2mH = (lwm2m_context_t *) user_data;
+    lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+}
 
 #define OBJ_COUNT 6
 
@@ -338,6 +344,7 @@ int main(int argc, char *argv[])
                                                         "   DATA: (optional) new value\r\n", prv_change, NULL},
             {"update", "Trigger a registration update", " update SERVER\r\n"
                                                         "   SERVER: short server id such as 123\r\n", prv_update, NULL},
+            {"boots", "Initiate a DI bootstrap process.", NULL, prv_initiate_bootstrap, NULL},
             {"quit", "Quit the client gracefully.", NULL, prv_quit, NULL},
             {"^C", "Quit the client abruptly (without sending a de-register message).", NULL, NULL, NULL},
 
@@ -427,9 +434,16 @@ int main(int argc, char *argv[])
         fprintf(stderr, "lwm2m_init() failed\r\n");
         return -1;
     }
+
+    /*
+     * Bootstrap state initialization
+     */
     if (strcmp(bootstrapRequested, "true") == 0)
     {
         lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+    }
+    else {
+        lwm2mH->bsState = NOT_BOOTSTRAPED;
     }
 
     /*
@@ -439,7 +453,7 @@ int main(int argc, char *argv[])
     result = lwm2m_configure(lwm2mH, "testlwm2mclient", BINDING_U, NULL, OBJ_COUNT, objArray);
     if (result != 0)
     {
-        fprintf(stderr, "lwm2m_set_objects() failed: 0x%X\r\n", result);
+        fprintf(stderr, "lwm2m_configure() failed: 0x%X\r\n", result);
         return -1;
     }
 

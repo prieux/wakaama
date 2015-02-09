@@ -40,6 +40,7 @@
  */
 
 #include "liblwm2m.h"
+#include "internals.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,15 +58,6 @@
 #define LWM2M_SECURITY_SHORT_SERVER_ID        10
 #define LWM2M_SECURITY_HOLD_OFF_ID            11
 
-/* typedef enum
-{
-    STATE_NOT_BOOTSTRAPED = 0,
-    STATE_BOOTSTRAP_REQUESTED,
-    STATE_BOOTSTRAP_PENDING,
-    STATE_BOOTSTRAP_FAILED,
-    STATE_BOOTSTRAPED
-} lwm2m_bootstrap_status_t;
- */
 typedef struct _security_instance_
 {
     struct _server_instance_ * next;        // matches lwm2m_list_t::next
@@ -218,7 +210,11 @@ static uint8_t prv_security_write(uint16_t instanceId,
     uint8_t result = COAP_204_CHANGED;
 
     targetP = (security_instance_t *)lwm2m_list_find(objectP->instanceList, instanceId);
-    if (NULL == targetP) return COAP_404_NOT_FOUND;
+    if (NULL == targetP)
+    {
+        LOG("    >>>> Object with instanceID: %u not found\r\n", instanceId);
+        return COAP_404_NOT_FOUND;
+    }
 
     i = 0;
     do

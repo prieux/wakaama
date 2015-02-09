@@ -14,7 +14,7 @@
  *    David Navarro, Intel Corporation - initial API and implementation
  *    Fabien Fleutot - Please refer to git log
  *    Toby Jaffey - Please refer to git log
- *    Benjamin CabeÌ - Please refer to git log
+ *    Benjamin Cabé - Please refer to git log
  *    Bosch Software Innovations GmbH - Please refer to git log
  *    
  *******************************************************************************/
@@ -64,7 +64,9 @@ static lwm2m_object_t * prv_find_object(lwm2m_context_t * contextP,
     int i;
 
     LOG("    Bootstrap state: %u\r\n", contextP->bsState);
-    if ((contextP->bsState != BOOTSTRAP_PENDING) && (Id == LWM2M_SECURITY_OBJECT_ID)) return NULL;
+    if ((contextP->bsState != BOOTSTRAP_PENDING) && (Id == LWM2M_SECURITY_OBJECT_ID)) {
+        return NULL;
+    }
 
     for (i = 0 ; i < contextP->numObject ; i++)
     {
@@ -201,6 +203,7 @@ coap_status_t object_write(lwm2m_context_t * contextP,
         LOG("    Object with objectId: %u not found\r\n", uriP->objectId);
         return NOT_FOUND_4_04;
     }
+    
     if (NULL == targetP->writeFunc) return METHOD_NOT_ALLOWED_4_05;
 
     if (LWM2M_URI_IS_SET_RESOURCE(uriP))
@@ -220,6 +223,7 @@ coap_status_t object_write(lwm2m_context_t * contextP,
         size = lwm2m_tlv_parse(buffer, length, &tlvP);
         if (size == 0) return COAP_500_INTERNAL_SERVER_ERROR;
     }
+    LOG("    >>>> about to write a value\r\n");
     result = targetP->writeFunc(uriP->instanceId, size, tlvP, targetP);
     lwm2m_tlv_free(size, tlvP);
 
@@ -294,6 +298,8 @@ coap_status_t object_delete(lwm2m_context_t * contextP,
     targetP = prv_find_object(contextP, uriP->objectId);
     if (NULL == targetP) return NOT_FOUND_4_04;
     if (NULL == targetP->deleteFunc) return METHOD_NOT_ALLOWED_4_05;
+
+    LOG("    Call to object_delete\r\n");
 
     return targetP->deleteFunc(uriP->instanceId, targetP);
 }
