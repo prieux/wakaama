@@ -227,6 +227,57 @@ int lwm2m_configure(lwm2m_context_t * contextP,
 
     return COAP_NO_ERROR;
 }
+
+void lwm2m_backup_objects(lwm2m_context_t * contextP)
+{
+    uint16_t i;
+
+    // clean previous backup
+    lwm2m_free(contextP->objectListBackup);
+    contextP->objectListBackup = (lwm2m_object_t **)lwm2m_malloc(contextP->numObject * sizeof(lwm2m_object_t *));
+    for (i = 0; i < contextP->numObject; i++) {
+        lwm2m_object_t * object = contextP->objectList[i];
+        fprintf(stdout, "OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x\r\n",
+                object->objID, object->readFunc, object->writeFunc, object->executeFunc, object->createFunc,
+                object->deleteFunc, object->closeFunc, object->copyFunc);
+        switch (object->objID)
+        {
+        case 0: // security object
+            break;
+        case 1: // server object
+            break;
+        case 3: // device object
+            break;
+        case 5: // firmware object
+            break;
+        case 6: // location object
+            break;
+        default:
+            fprintf(stdout, "  data: %s\r\n", object->userData);
+            break;
+        }
+        lwm2m_list_t * instance = object->instanceList;
+        while (instance != NULL)
+        {
+            fprintf(stdout, "    IID: %d\r\n", instance->id);
+            instance = instance->next;
+        }
+        if (NULL != object->copyFunc)
+        {
+            lwm2m_object_t * backup = object->copyFunc(object);
+            fprintf(stdout, ">>>> BACKUP, OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x\r\n",
+                    backup->objID, backup->readFunc, backup->writeFunc, backup->executeFunc, backup->createFunc,
+                    backup->deleteFunc, backup->closeFunc, backup->copyFunc);
+            if (NULL != backup->printFunc) {
+                object->printFunc(backup);
+            }
+        }
+    }
+}
+
+void lwm2m_restore_objects(lwm2m_context_t * contextP)
+{
+}
 #endif
 
 

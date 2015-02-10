@@ -380,6 +380,41 @@ static void prv_security_close(lwm2m_object_t * objectP)
     }
 }
 
+static lwm2m_object_t * prv_security_copy(lwm2m_object_t * objectP)
+{
+    lwm2m_object_t * securityObj;
+
+    securityObj = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != securityObj)
+    {
+        securityObj->objID = objectP->objID;
+        while (objectP->instanceList != NULL)
+        {
+            security_instance_t * instance = (security_instance_t *)objectP->instanceList;
+            security_instance_t * instanceCopy = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
+            if (NULL == instanceCopy)
+            {
+                lwm2m_free(securityObj);
+                return NULL;
+            }
+            instanceCopy->instanceId = instance->instanceId;
+            instanceCopy->uri = instance->uri;
+            instanceCopy->isBootstrap = instance->isBootstrap;
+            instanceCopy->shortID = instance->shortID;
+            securityObj->instanceList = LWM2M_LIST_ADD(securityObj->instanceList, instanceCopy);
+            objectP->instanceList = objectP->instanceList->next;
+        }
+        securityObj->readFunc = objectP->readFunc;
+        securityObj->writeFunc = objectP->writeFunc;
+        securityObj->createFunc = objectP->createFunc;
+        securityObj->deleteFunc = objectP->deleteFunc;
+        securityObj->closeFunc = objectP->closeFunc;
+        securityObj->copyFunc = objectP->copyFunc;
+        securityObj->printFunc = objectP->printFunc;
+    }
+    return securityObj;
+}
+
 lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool isBootstrap)
 {
     lwm2m_object_t * securityObj;
@@ -394,7 +429,7 @@ lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool i
 
         securityObj->objID = 0;
 
-        // Manually create an hardcoded server
+        // Manually create an hardcoded instance
         targetP = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
         if (NULL == targetP)
         {
@@ -416,6 +451,7 @@ lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool i
         securityObj->createFunc = prv_security_create;
         securityObj->deleteFunc = prv_security_delete;
         securityObj->closeFunc = prv_security_close;
+        securityObj->copyFunc = prv_security_copy;
     }
 
     return securityObj;

@@ -291,6 +291,8 @@ typedef uint8_t (*lwm2m_execute_callback_t) (uint16_t instanceId, uint16_t resou
 typedef uint8_t (*lwm2m_create_callback_t) (uint16_t instanceId, int numData, lwm2m_tlv_t * dataArray, lwm2m_object_t * objectP);
 typedef uint8_t (*lwm2m_delete_callback_t) (uint16_t instanceId, lwm2m_object_t * objectP);
 typedef void (*lwm2m_close_callback_t) (lwm2m_object_t * objectP);
+typedef lwm2m_object_t * (*lwm2m_copy_callback_t) (lwm2m_object_t * objectP);
+typedef void (*lwm2m_print_callback_t) (lwm2m_object_t * objectP);
 
 
 struct _lwm2m_object_t
@@ -303,6 +305,8 @@ struct _lwm2m_object_t
     lwm2m_create_callback_t  createFunc;
     lwm2m_delete_callback_t  deleteFunc;
     lwm2m_close_callback_t   closeFunc;
+    lwm2m_copy_callback_t    copyFunc;
+    lwm2m_print_callback_t   printFunc;
     void *                   userData;
 };
 
@@ -510,6 +514,7 @@ typedef struct
 
 // initialize a liblwm2m context.
 lwm2m_context_t * lwm2m_init(lwm2m_connect_server_callback_t connectCallback, lwm2m_buffer_send_callback_t bufferSendCallback, void * userData);
+
 // close a liblwm2m context.
 void lwm2m_close(lwm2m_context_t * contextP);
 
@@ -529,6 +534,12 @@ int lwm2m_start(lwm2m_context_t * contextP);
 
 // initiate a bootstrap session
 int lwm2m_bootstrap(lwm2m_context_t * contextP);
+
+// backup objects configuration and content (during bootstrap)
+void lwm2m_backup_objects(lwm2m_context_t * contextP);
+
+// restore objects configuration and content (in case of bootstrap failure)
+void lwm2m_restore_objects(lwm2m_context_t * contextP);
 
 // check if the server registrations are outdated and needs to be renewed
 int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP);

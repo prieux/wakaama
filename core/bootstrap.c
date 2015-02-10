@@ -150,11 +150,13 @@ void handle_bootstrap(lwm2m_context_t * contextP,
          * TODO: starting here, we'll need to archive the object configuration in case of network or
          * botstrap server failure
          */
+        lwm2m_backup_objects(contextP);
     }
     else
     {
         contextP->bsState = BOOTSTRAP_FAILED;
         LOG("    Bootstrap failed\r\n");
+        lwm2m_restore_objects(contextP);
     }
 }
 

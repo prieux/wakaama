@@ -80,7 +80,7 @@ typedef struct {
 #define PRV_TLV_BUFFER_SIZE     64
 
 /**
-implementtaion for all read-able resources
+implementation for all read-able resources
 */
 static uint8_t prv_res2tlv(lwm2m_tlv_t* tlvP, location_data_t* locDataP){
 //----------------------------------------------------------------------- JH --
@@ -171,8 +171,55 @@ static uint8_t prv_location_read(uint16_t objInstId,
     return result;
 }
 
+static lwm2m_object_t * prv_location_copy(lwm2m_object_t * objectP)
+{
+    lwm2m_object_t * locationObj;
+
+    locationObj = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != locationObj)
+    {
+        locationObj->objID = objectP->objID;
+        locationObj->userData = lwm2m_malloc(sizeof(location_data_t));
+        if (NULL == locationObj->userData)
+        {
+            lwm2m_free(locationObj);
+            return NULL;
+        }
+        location_data_t * dataSrc = (location_data_t *)objectP->userData;
+        if (NULL != dataSrc)
+        {
+            location_data_t * dataCopy = (location_data_t *)locationObj->userData;
+            strcpy(dataCopy->latitude, dataSrc->latitude);
+            strcpy(dataCopy->longitude, dataSrc->longitude);
+            strcpy(dataCopy->altitude, dataSrc->altitude);
+            strcpy(dataCopy->uncertainty, dataSrc->uncertainty);
+            memcpy(dataCopy->velocity, dataSrc->velocity, VELOCITY_OCTETS * sizeof(uint8_t));
+            dataCopy->timestamp = dataSrc->timestamp;
+        }
+        locationObj->readFunc = objectP->readFunc;
+        locationObj->writeFunc = objectP->writeFunc;
+        locationObj->createFunc = objectP->createFunc;
+        locationObj->deleteFunc = objectP->deleteFunc;
+        locationObj->closeFunc = objectP->closeFunc;
+        locationObj->copyFunc = objectP->copyFunc;
+        locationObj->printFunc = objectP->printFunc;
+    }
+    return locationObj;
+}
+
+static void prv_location_print(lwm2m_object_t * objectP)
+{
+    fprintf(stdout, "Printing location object\r\n");
+    location_data_t * data = (location_data_t *)objectP->userData;
+    if (NULL != data)
+    {
+        fprintf(stdout, "lat: %s, lon: %s, alt: %s, uncertainty: %s, timestamp: %u\r\n",
+                data->latitude, data->longitude, data->altitude, data->uncertainty, data->timestamp);
+    }
+}
+
 /**
-  * Convenience functon to set the velocity attributes.
+  * Convenience function to set the velocity attributes.
   * see 3GPP TS 23.032 V11.0.0(2012-09) page 23,24.
   * implemented for: HORIZONTAL_VELOCITY_WITH_UNCERTAINTY
   * @param locationObj location object reference (to be casted!)
@@ -193,7 +240,7 @@ void location_setVelocity (lwm2m_object_t* locationObj, uint16_t bearing,
 }
 
 /**
-  * A convenience functon to set the location coordinates with its timestamp.
+  * A convenience function to set the location coordinates with its timestamp.
   * @see testMe()
   * @param locationObj location object reference (to be casted!)
   * @param latitude  the second argument.
@@ -247,6 +294,8 @@ lwm2m_object_t * get_object_location() {
     //locationObj->executeFunc = prv_location_execute;
     //locationObj->createFunc  = prv_location_create;
     //locationObj->deleteFunc  = prv_location_delete;
+    locationObj->copyFunc    = prv_location_copy;
+    locationObj->printFunc   = prv_location_print;
     locationObj->userData    = lwm2m_malloc(sizeof(location_data_t));
 
     // initialize private data structure containing the needed variables
