@@ -96,6 +96,7 @@ void lwm2m_close(lwm2m_context_t * contextP)
             contextP->objectList[i]->closeFunc(contextP->objectList[i]);
         }
         lwm2m_free(contextP->objectList[i]);
+        lwm2m_free(contextP->objectListBackup[i]);
     }
 
     while (NULL != contextP->serverList)
@@ -252,43 +253,31 @@ void lwm2m_backup_objects(lwm2m_context_t * contextP)
     uint16_t i;
 
     // clean previous backup
-    lwm2m_free(contextP->objectListBackup);
+    if (NULL != contextP->objectListBackup) {
+        for (i = 0; i < contextP->numObject; i++) {
+            lwm2m_free(contextP->objectListBackup[i]);
+        }
+        lwm2m_free(contextP->objectListBackup);
+    }
     contextP->objectListBackup = (lwm2m_object_t **)lwm2m_malloc(contextP->numObject * sizeof(lwm2m_object_t *));
     for (i = 0; i < contextP->numObject; i++) {
         lwm2m_object_t * object = contextP->objectList[i];
-        fprintf(stdout, "OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x\r\n",
+        LOG(">>>> ORIGIN: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
                 object->objID, object->readFunc, object->writeFunc, object->executeFunc, object->createFunc,
-                object->deleteFunc, object->closeFunc, object->copyFunc);
-        switch (object->objID)
-        {
-        case 0: // security object
-            break;
-        case 1: // server object
-            break;
-        case 3: // device object
-            break;
-        case 5: // firmware object
-            break;
-        case 6: // location object
-            break;
-        default:
-            fprintf(stdout, "  data: %s\r\n", object->userData);
-            break;
-        }
-        lwm2m_list_t * instance = object->instanceList;
-        while (instance != NULL)
-        {
-            fprintf(stdout, "    IID: %d\r\n", instance->id);
-            instance = instance->next;
+                object->deleteFunc, object->closeFunc, object->copyFunc, object->printFunc);
+        if (NULL != object->printFunc) {
+            object->printFunc(object);
         }
         if (NULL != object->copyFunc)
         {
             lwm2m_object_t * backup = object->copyFunc(object);
-            fprintf(stdout, ">>>> BACKUP, OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x\r\n",
-                    backup->objID, backup->readFunc, backup->writeFunc, backup->executeFunc, backup->createFunc,
-                    backup->deleteFunc, backup->closeFunc, backup->copyFunc);
-            if (NULL != backup->printFunc) {
-                object->printFunc(backup);
+            if (NULL != backup) {
+                LOG(">>>> BACKUP: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
+                        backup->objID, backup->readFunc, backup->writeFunc, backup->executeFunc, backup->createFunc,
+                        backup->deleteFunc, backup->closeFunc, backup->copyFunc, backup->printFunc);
+                if (NULL != backup->printFunc) {
+                    backup->printFunc(backup);
+                }
             }
         }
     }
@@ -296,6 +285,15 @@ void lwm2m_backup_objects(lwm2m_context_t * contextP)
 
 void lwm2m_restore_objects(lwm2m_context_t * contextP)
 {
+    if (NULL != contextP->objectList) {
+        int i;
+        for (i = 0; i < contextP->numObject; i++) {
+            lwm2m_free(contextP->objectList[i]);
+        }
+        lwm2m_free(contextP->objectList);
+    }
+    // KISS
+    contextP->objectList = contextP->objectListBackup;
 }
 #endif
 

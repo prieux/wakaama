@@ -270,7 +270,8 @@ static void prv_change(char * buffer,
 
                     if (COAP_204_CHANGED != lwm2mH->objectList[i]->writeFunc(uri.instanceId,
                                                                              1, tlvP,
-                                                                             lwm2mH->objectList[i]))
+                                                                             lwm2mH->objectList[i],
+                                                                             lwm2mH->bsState == BOOTSTRAP_PENDING))
                     {
                         fprintf(stdout, "Failed to change value !\n");
                     }

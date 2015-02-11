@@ -173,49 +173,33 @@ static uint8_t prv_location_read(uint16_t objInstId,
 
 static lwm2m_object_t * prv_location_copy(lwm2m_object_t * objectP)
 {
-    lwm2m_object_t * locationObj;
-
-    locationObj = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != locationObj)
+    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != objectCopy)
     {
-        locationObj->objID = objectP->objID;
-        locationObj->userData = lwm2m_malloc(sizeof(location_data_t));
-        if (NULL == locationObj->userData)
-        {
-            lwm2m_free(locationObj);
+        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
+        objectCopy->userData = lwm2m_malloc(sizeof(location_data_t));
+        if (NULL == objectCopy->userData) {
+            lwm2m_free(objectCopy);
             return NULL;
         }
-        location_data_t * dataSrc = (location_data_t *)objectP->userData;
-        if (NULL != dataSrc)
-        {
-            location_data_t * dataCopy = (location_data_t *)locationObj->userData;
-            strcpy(dataCopy->latitude, dataSrc->latitude);
-            strcpy(dataCopy->longitude, dataSrc->longitude);
-            strcpy(dataCopy->altitude, dataSrc->altitude);
-            strcpy(dataCopy->uncertainty, dataSrc->uncertainty);
-            memcpy(dataCopy->velocity, dataSrc->velocity, VELOCITY_OCTETS * sizeof(uint8_t));
-            dataCopy->timestamp = dataSrc->timestamp;
+        if (NULL != objectP->userData) {
+            memcpy(objectCopy->userData, objectP->userData, sizeof(location_data_t));
         }
-        locationObj->readFunc = objectP->readFunc;
-        locationObj->writeFunc = objectP->writeFunc;
-        locationObj->createFunc = objectP->createFunc;
-        locationObj->deleteFunc = objectP->deleteFunc;
-        locationObj->closeFunc = objectP->closeFunc;
-        locationObj->copyFunc = objectP->copyFunc;
-        locationObj->printFunc = objectP->printFunc;
     }
-    return locationObj;
+    return objectCopy;
 }
 
 static void prv_location_print(lwm2m_object_t * objectP)
 {
-    fprintf(stdout, "Printing location object\r\n");
+#ifdef WITH_LOGS
     location_data_t * data = (location_data_t *)objectP->userData;
+    LOG("  Location object: %x\r\n", data);
     if (NULL != data)
     {
-        fprintf(stdout, "lat: %s, lon: %s, alt: %s, uncertainty: %s, timestamp: %u\r\n",
+        LOG("    lat: %s, lon: %s, alt: %s, uncertainty: %s, timestamp: %u\r\n",
                 data->latitude, data->longitude, data->altitude, data->uncertainty, data->timestamp);
     }
+#endif
 }
 
 /**
