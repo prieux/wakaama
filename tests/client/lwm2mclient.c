@@ -143,7 +143,7 @@ void handle_value_changed(lwm2m_context_t * lwm2mH,
             tlvP->length = valueLength;
             tlvP->value = (uint8_t*) value;
 
-            result = object->writeFunc(uri->instanceId, 1, tlvP, object);
+            result = object->writeFunc(uri->instanceId, 1, tlvP, object, lwm2mH->bsState == BOOTSTRAP_PENDING);
             if (COAP_405_METHOD_NOT_ALLOWED == result)
             {
                 switch (uri->objectId)

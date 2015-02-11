@@ -60,12 +60,11 @@
 
 typedef struct _security_instance_
 {
-    struct _server_instance_ * next;        // matches lwm2m_list_t::next
-    uint16_t                   instanceId;  // matches lwm2m_list_t::id
-    char *                     uri;
-    bool                       isBootstrap;
-    uint16_t                   shortID;
-    //lwm2m_bootstrap_status_t   bsStatus;
+    struct _security_instance_ * next;        // matches lwm2m_list_t::next
+    uint16_t                     instanceId;  // matches lwm2m_list_t::id
+    char *                       uri;
+    bool                         isBootstrap;
+    uint16_t                     shortID;
 } security_instance_t;
 
 static uint8_t prv_get_value(lwm2m_tlv_t * tlvP,
@@ -203,7 +202,8 @@ static uint8_t prv_security_read(uint16_t instanceId,
 static uint8_t prv_security_write(uint16_t instanceId,
                                   int numData,
                                   lwm2m_tlv_t * dataArray,
-                                  lwm2m_object_t * objectP)
+                                  lwm2m_object_t * objectP,
+                                  bool bootstrapPending)
 {
     security_instance_t * targetP;
     int i;
@@ -351,7 +351,7 @@ static uint8_t prv_security_create(uint16_t instanceId,
     targetP->instanceId = instanceId;
     objectP->instanceList = LWM2M_LIST_ADD(objectP->instanceList, targetP);
 
-    result = prv_security_write(instanceId, numData, dataArray, objectP);
+    result = prv_security_write(instanceId, numData, dataArray, objectP, false);
 
     if (result != COAP_204_CHANGED)
     {
@@ -382,37 +382,46 @@ static void prv_security_close(lwm2m_object_t * objectP)
 
 static lwm2m_object_t * prv_security_copy(lwm2m_object_t * objectP)
 {
-    lwm2m_object_t * securityObj;
-
-    securityObj = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != securityObj)
-    {
-        securityObj->objID = objectP->objID;
-        while (objectP->instanceList != NULL)
-        {
-            security_instance_t * instance = (security_instance_t *)objectP->instanceList;
+    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != objectCopy) {
+        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
+        objectCopy->instanceList = NULL;
+        objectCopy->userData = NULL;
+        security_instance_t * instance = (security_instance_t *)objectP->instanceList;
+        security_instance_t * previousInstanceCopy = NULL;
+        while (instance != NULL) {
             security_instance_t * instanceCopy = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
-            if (NULL == instanceCopy)
-            {
-                lwm2m_free(securityObj);
+            if (NULL == instanceCopy) {
+                lwm2m_free(objectCopy);
                 return NULL;
             }
-            instanceCopy->instanceId = instance->instanceId;
-            instanceCopy->uri = instance->uri;
-            instanceCopy->isBootstrap = instance->isBootstrap;
-            instanceCopy->shortID = instance->shortID;
-            securityObj->instanceList = LWM2M_LIST_ADD(securityObj->instanceList, instanceCopy);
-            objectP->instanceList = objectP->instanceList->next;
+            memcpy(instanceCopy, instance, sizeof(security_instance_t));
+            instanceCopy->uri = (char*)lwm2m_malloc(strlen(instance->uri) + 1);
+            strcpy(instanceCopy->uri, instance->uri);
+            instance = (security_instance_t *)instance->next;
+            if (previousInstanceCopy == NULL) {
+                objectCopy->instanceList = (lwm2m_list_t *)instanceCopy;
+            }
+            else {
+                previousInstanceCopy->next = instanceCopy;
+            }
+            previousInstanceCopy = instanceCopy;
         }
-        securityObj->readFunc = objectP->readFunc;
-        securityObj->writeFunc = objectP->writeFunc;
-        securityObj->createFunc = objectP->createFunc;
-        securityObj->deleteFunc = objectP->deleteFunc;
-        securityObj->closeFunc = objectP->closeFunc;
-        securityObj->copyFunc = objectP->copyFunc;
-        securityObj->printFunc = objectP->printFunc;
     }
-    return securityObj;
+    return objectCopy;
+}
+
+static void prv_security_print(lwm2m_object_t * objectP)
+{
+#ifdef WITH_LOGS
+    LOG("  Security object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
+    security_instance_t * instance = (security_instance_t *)objectP->instanceList;
+    while (instance != NULL) {
+        LOG("    instance: %x, instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
+                instance, instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false", instance->shortID);
+        instance = (security_instance_t *)instance->next;
+    }
+#endif
 }
 
 lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool isBootstrap)
@@ -452,6 +461,7 @@ lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool i
         securityObj->deleteFunc = prv_security_delete;
         securityObj->closeFunc = prv_security_close;
         securityObj->copyFunc = prv_security_copy;
+        securityObj->printFunc = prv_security_print;
     }
 
     return securityObj;

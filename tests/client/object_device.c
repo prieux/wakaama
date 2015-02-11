@@ -56,6 +56,7 @@
 
 #include "liblwm2m.h"
 #include "lwm2mclient.h"
+#include "internals.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -412,7 +413,8 @@ static uint8_t prv_device_read(uint16_t instanceId,
 static uint8_t prv_device_write(uint16_t instanceId,
                                 int numData,
                                 lwm2m_tlv_t * dataArray,
-                                lwm2m_object_t * objectP)
+                                lwm2m_object_t * objectP,
+                                bool bootstrapPending)
 {
     int i;
     uint8_t result;
@@ -501,6 +503,37 @@ static uint8_t prv_device_execute(uint16_t instanceId,
     }
 }
 
+static lwm2m_object_t * prv_device_copy(lwm2m_object_t * objectP)
+{
+    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != objectCopy)
+    {
+        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
+        objectCopy->userData = lwm2m_malloc(sizeof(device_data_t));
+        if (NULL == objectCopy->userData) {
+            lwm2m_free(objectCopy);
+            return NULL;
+        }
+        if (NULL != objectP->userData) {
+            memcpy(objectCopy->userData, objectP->userData, sizeof(device_data_t));
+        }
+    }
+    return objectCopy;
+}
+
+static void prv_device_print(lwm2m_object_t * objectP)
+{
+#ifdef WITH_LOGS
+    device_data_t * data = (device_data_t *)objectP->userData;
+    LOG("  Device object: %x\r\n", data);
+    if (NULL != data)
+    {
+        LOG("    time: %d, time_offset: %s\r\n",
+                data->time, data->time_offset);
+    }
+#endif
+}
+
 lwm2m_object_t * get_object_device()
 {
     /*
@@ -528,6 +561,8 @@ lwm2m_object_t * get_object_device()
         deviceObj->readFunc = prv_device_read;
         deviceObj->writeFunc = prv_device_write;
         deviceObj->executeFunc = prv_device_execute;
+        deviceObj->copyFunc = prv_device_copy;
+        deviceObj->printFunc = prv_device_print;
         deviceObj->userData = lwm2m_malloc(sizeof(device_data_t));
 
         /*

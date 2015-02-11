@@ -64,6 +64,7 @@
  */
 
 #include "liblwm2m.h"
+#include "internals.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -170,7 +171,8 @@ static uint8_t prv_read(uint16_t instanceId,
 static uint8_t prv_write(uint16_t instanceId,
                          int numData,
                          lwm2m_tlv_t * dataArray,
-                         lwm2m_object_t * objectP)
+                         lwm2m_object_t * objectP,
+                         bool bootstrapPending)
 {
     prv_instance_t * targetP;
     int64_t value;
@@ -231,7 +233,7 @@ static uint8_t prv_create(uint16_t instanceId,
     targetP->shortID = instanceId;
     objectP->instanceList = LWM2M_LIST_ADD(objectP->instanceList, targetP);
 
-    result = prv_write(instanceId, numData, dataArray, objectP);
+    result = prv_write(instanceId, numData, dataArray, objectP, false);
 
     if (result != COAP_204_CHANGED)
     {
@@ -271,6 +273,48 @@ static uint8_t prv_exec(uint16_t instanceId,
     }
 }
 
+static lwm2m_object_t * prv_test_copy(lwm2m_object_t * objectP)
+{
+    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != objectCopy) {
+        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
+        objectCopy->instanceList = NULL;
+        objectCopy->userData = NULL;
+        prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
+        prv_instance_t * previousInstanceCopy = NULL;
+        while (instance != NULL) {
+            prv_instance_t * instanceCopy = (prv_instance_t *)lwm2m_malloc(sizeof(prv_instance_t));
+            if (NULL == instanceCopy) {
+                lwm2m_free(objectCopy);
+                return NULL;
+            }
+            memcpy(instanceCopy, instance, sizeof(prv_instance_t));
+            instance = (prv_instance_t *)instance->next;
+            if (previousInstanceCopy == NULL) {
+                objectCopy->instanceList = (lwm2m_list_t *)instanceCopy;
+            }
+            else {
+                previousInstanceCopy->next = instanceCopy;
+            }
+            previousInstanceCopy = instanceCopy;
+        }
+    }
+    return objectCopy;
+}
+
+static void prv_test_print(lwm2m_object_t * objectP)
+{
+#ifdef WITH_LOGS
+    LOG("  Test object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
+    prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
+    while (instance != NULL) {
+        LOG("    instance: %x, shortId: %u, test: %u\r\n",
+                instance, instance->shortID, instance->test);
+        instance = (prv_instance_t *)instance->next;
+    }
+#endif
+}
+
 lwm2m_object_t * get_test_object()
 {
     lwm2m_object_t * testObj;
@@ -307,6 +351,8 @@ lwm2m_object_t * get_test_object()
         testObj->createFunc = prv_create;
         testObj->deleteFunc = prv_delete;
         testObj->executeFunc = prv_exec;
+        testObj->copyFunc = prv_test_copy;
+        testObj->printFunc = prv_test_print;
     }
 
     return testObj;

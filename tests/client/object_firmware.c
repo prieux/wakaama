@@ -33,7 +33,7 @@
  */
 
 #include "liblwm2m.h"
-
+#include "internals.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -128,7 +128,8 @@ static uint8_t prv_firmware_read(uint16_t instanceId,
 static uint8_t prv_firmware_write(uint16_t instanceId,
                                   int numData,
                                   lwm2m_tlv_t * dataArray,
-                                  lwm2m_object_t * objectP)
+                                  lwm2m_object_t * objectP,
+                                  bool bootstrapPending)
 {
     int i;
     bool bvalue;
@@ -214,6 +215,37 @@ static uint8_t prv_firmware_execute(uint16_t instanceId,
     }
 }
 
+static lwm2m_object_t * prv_firmware_copy(lwm2m_object_t * objectP)
+{
+    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
+    if (NULL != objectCopy)
+    {
+        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
+        objectCopy->userData = lwm2m_malloc(sizeof(firmware_data_t));
+        if (NULL == objectCopy->userData) {
+            lwm2m_free(objectCopy);
+            return NULL;
+        }
+        if (NULL != objectP->userData) {
+            memcpy(objectCopy->userData, objectP->userData, sizeof(firmware_data_t));
+        }
+    }
+    return objectCopy;
+}
+
+static void prv_firmware_print(lwm2m_object_t * objectP)
+{
+#ifdef WITH_LOGS
+    firmware_data_t * data = (firmware_data_t *)objectP->userData;
+    LOG("  Firmware object: %x\r\n", data);
+    if (NULL != data)
+    {
+        LOG("    state: %u, supported: %u, result: %u\r\n",
+                data->state, data->supported, data->result);
+    }
+#endif
+}
+
 lwm2m_object_t * get_object_firmware()
 {
     /*
@@ -242,6 +274,8 @@ lwm2m_object_t * get_object_firmware()
         firmwareObj->writeFunc = prv_firmware_write;
         firmwareObj->executeFunc = prv_firmware_execute;
         firmwareObj->userData = lwm2m_malloc(sizeof(firmware_data_t));
+        firmwareObj->copyFunc = prv_firmware_copy;
+        firmwareObj->printFunc = prv_firmware_print;
 
         /*
          * Also some user data can be stored in the object with a private structure containing the needed variables
