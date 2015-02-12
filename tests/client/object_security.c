@@ -224,6 +224,7 @@ static uint8_t prv_security_write(uint16_t instanceId,
         case LWM2M_SECURITY_URI_ID:
             if (targetP->uri != NULL) lwm2m_free(targetP->uri);
             targetP->uri = (char *)lwm2m_malloc(dataArray[i].length + 1);
+            memset(targetP->uri, 0, dataArray[i].length + 1);
             if (targetP->uri != NULL)
             {
                 strncpy(targetP->uri, dataArray[i].value, dataArray[i].length);

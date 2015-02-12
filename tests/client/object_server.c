@@ -46,6 +46,9 @@ typedef struct _server_instance_
     uint16_t    instanceId;            // matches lwm2m_list_t::id
     uint16_t    shortServerId;
     uint32_t    lifetime;
+    uint32_t    defaultMinPeriod;
+    uint32_t    defaultMaxPeriod;
+    uint32_t    disableTimeout;
     bool        storing;
     char        binding[4];
 } server_instance_t;
@@ -136,6 +139,25 @@ static uint8_t prv_server_read(uint16_t instanceId,
     return result;
 }
 
+static uint8_t prv_set_int_value(lwm2m_tlv_t * dataArray, uint32_t * data) {
+    uint8_t result;
+    int64_t value;
+
+    if (1 == lwm2m_tlv_decode_int(dataArray, &value)) {
+        if (value >= 0 && value <= 0xFFFFFFFF) {
+            *data = value;
+            result = COAP_204_CHANGED;
+        }
+        else {
+            result = COAP_406_NOT_ACCEPTABLE;
+        }
+    }
+    else {
+        result = COAP_400_BAD_REQUEST;
+    }
+    return result;
+}
+
 static uint8_t prv_server_write(uint16_t instanceId,
                                 int numData,
                                 lwm2m_tlv_t * dataArray,
@@ -149,6 +171,7 @@ static uint8_t prv_server_write(uint16_t instanceId,
     targetP = (server_instance_t *)lwm2m_list_find(objectP->instanceList, instanceId);
     if (NULL == targetP) {
         // TODO: manage object creation in case of a bootstrap sequence
+        LOG("    >>>> instance not found\r\n");
         return COAP_404_NOT_FOUND;
     }
 
@@ -159,19 +182,7 @@ static uint8_t prv_server_write(uint16_t instanceId,
         {
         case LWM2M_SERVER_SHORT_ID_ID:
             if (bootstrapPending) {
-                int64_t value;
-                if (1 == lwm2m_tlv_decode_int(dataArray + i, &value)) {
-                    if (value >= 0 && value <= 0xFFFFFFFF) {
-                        targetP->shortServerId = value;
-                        result = COAP_204_CHANGED;
-                    }
-                    else {
-                        result = COAP_406_NOT_ACCEPTABLE;
-                    }
-                }
-                else {
-                    result = COAP_400_BAD_REQUEST;
-                }
+                result = prv_set_int_value(dataArray + i, (uint32_t *)&(targetP->shortServerId));
             }
             else {
                 LOG("    >>>> server is not allowed to write short ID\r\n");
@@ -180,34 +191,15 @@ static uint8_t prv_server_write(uint16_t instanceId,
             break;
 
         case LWM2M_SERVER_LIFETIME_ID:
-        {
-            int64_t value;
-
-            if (1 == lwm2m_tlv_decode_int(dataArray + i, &value))
-            {
-                if (value >= 0 && value <= 0xFFFFFFFF)
-                {
-                    targetP->lifetime = value;
-                    result = COAP_204_CHANGED;
-                }
-                else
-                {
-                    result = COAP_406_NOT_ACCEPTABLE;
-                }
-            }
-            else
-            {
-                result = COAP_400_BAD_REQUEST;
-            }
-        }
-        break;
+            result = prv_set_int_value(dataArray + i, (uint32_t *)&(targetP->lifetime));
+            break;
 
         case LWM2M_SERVER_MIN_PERIOD_ID:
-            result = COAP_404_NOT_FOUND;
+            result = prv_set_int_value(dataArray + i, &(targetP->defaultMinPeriod));
             break;
 
         case LWM2M_SERVER_MAX_PERIOD_ID:
-            result = COAP_404_NOT_FOUND;
+            result = prv_set_int_value(dataArray + i, &(targetP->defaultMaxPeriod));
             break;
 
         case LWM2M_SERVER_DISABLE_ID:
@@ -215,7 +207,7 @@ static uint8_t prv_server_write(uint16_t instanceId,
             break;
 
         case LWM2M_SERVER_TIMEOUT_ID:
-            result = COAP_404_NOT_FOUND;
+            result = prv_set_int_value(dataArray + i, &(targetP->disableTimeout));
             break;
 
         case LWM2M_SERVER_STORING_ID:
@@ -379,7 +371,7 @@ static lwm2m_object_t * prv_server_copy(lwm2m_object_t * objectP)
 static void prv_server_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("Server object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
+    LOG("  Server object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
     server_instance_t * serverInstance = (server_instance_t *)objectP->instanceList;
     while (serverInstance != NULL) {
         LOG("    instance: %x, instanceId: %u, shortServerId: %u, lifetime: %u, storing: %s, binding: %s\r\n",
