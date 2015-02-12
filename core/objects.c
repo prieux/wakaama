@@ -223,7 +223,7 @@ coap_status_t object_write(lwm2m_context_t * contextP,
         size = lwm2m_tlv_parse(buffer, length, &tlvP);
         if (size == 0) return COAP_500_INTERNAL_SERVER_ERROR;
     }
-    LOG("    >>>> about to write a value\r\n");
+    LOG("    >>>> about to write a value, bootstrap pending: %s\r\n", contextP->bsState == BOOTSTRAP_PENDING ? "true" : "false");
     result = targetP->writeFunc(uriP->instanceId, size, tlvP, targetP, contextP->bsState == BOOTSTRAP_PENDING);
     lwm2m_tlv_free(size, tlvP);
 

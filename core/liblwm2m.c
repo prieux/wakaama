@@ -96,7 +96,14 @@ void lwm2m_close(lwm2m_context_t * contextP)
             contextP->objectList[i]->closeFunc(contextP->objectList[i]);
         }
         lwm2m_free(contextP->objectList[i]);
-        lwm2m_free(contextP->objectListBackup[i]);
+    }
+
+    if (NULL != contextP->objectListBackup) {
+        for (i = 0 ; i < contextP->numObject ; i++) {
+            if (NULL != contextP->objectListBackup[i]) {
+                lwm2m_free(contextP->objectListBackup[i]);
+            }
+        }
     }
 
     while (NULL != contextP->serverList)
@@ -140,9 +147,12 @@ void lwm2m_close(lwm2m_context_t * contextP)
         lwm2m_free(targetP);
     }
 
-   if (NULL != contextP->objectList)
-    {
+    if (NULL != contextP->objectList) {
         lwm2m_free(contextP->objectList);
+    }
+
+    if (NULL != contextP->objectListBackup) {
+        lwm2m_free(contextP->objectListBackup);
     }
 
     lwm2m_free(contextP->endpointName);
@@ -232,6 +242,7 @@ int lwm2m_configure(lwm2m_context_t * contextP,
 void lwm2m_backup_objects(lwm2m_context_t * contextP)
 {
     uint16_t i;
+    lwm2m_object_t * objectListBackup[contextP->numObject];
 
     // clean previous backup
     if (NULL != contextP->objectListBackup) {
@@ -243,25 +254,33 @@ void lwm2m_backup_objects(lwm2m_context_t * contextP)
     contextP->objectListBackup = (lwm2m_object_t **)lwm2m_malloc(contextP->numObject * sizeof(lwm2m_object_t *));
     for (i = 0; i < contextP->numObject; i++) {
         lwm2m_object_t * object = contextP->objectList[i];
-        LOG(">>>> ORIGIN: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
-                object->objID, object->readFunc, object->writeFunc, object->executeFunc, object->createFunc,
-                object->deleteFunc, object->closeFunc, object->copyFunc, object->printFunc);
-        if (NULL != object->printFunc) {
-            object->printFunc(object);
-        }
+//        LOG(">>>> ORIGIN: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
+//                object->objID, object->readFunc, object->writeFunc, object->executeFunc, object->createFunc,
+//                object->deleteFunc, object->closeFunc, object->copyFunc, object->printFunc);
+//        if (NULL != object->printFunc) {
+//            object->printFunc(object);
+//        }
         if (NULL != object->copyFunc)
         {
             lwm2m_object_t * backup = object->copyFunc(object);
-            if (NULL != backup) {
-                LOG(">>>> BACKUP: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
-                        backup->objID, backup->readFunc, backup->writeFunc, backup->executeFunc, backup->createFunc,
-                        backup->deleteFunc, backup->closeFunc, backup->copyFunc, backup->printFunc);
-                if (NULL != backup->printFunc) {
-                    backup->printFunc(backup);
-                }
-            }
+            objectListBackup[i] = backup;
+//            if (NULL != backup) {
+//                LOG(">>>> BACKUP: OID: %d, read: %x, write: %x, exec: %x, create: %x, delete: %x, close: %x, copy: %x, print: %x\r\n",
+//                        backup->objID, backup->readFunc, backup->writeFunc, backup->executeFunc, backup->createFunc,
+//                        backup->deleteFunc, backup->closeFunc, backup->copyFunc, backup->printFunc);
+//                if (NULL != backup->printFunc) {
+//                    backup->printFunc(backup);
+//                }
+//            }
         }
     }
+    memcpy(contextP->objectListBackup, objectListBackup, contextP->numObject * sizeof(lwm2m_object_t *));
+//    for (i = 0; i < contextP->numObject; i++) {
+//        lwm2m_object_t * object = contextP->objectListBackup[i];
+//        if (NULL != object->printFunc) {
+//            object->printFunc(object);
+//        }
+//    }
 }
 
 void lwm2m_restore_objects(lwm2m_context_t * contextP)

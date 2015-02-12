@@ -379,6 +379,32 @@ static void prv_initiate_bootstrap(char * buffer,
     lwm2mH->bsState = BOOTSTRAP_REQUESTED;
 }
 
+static void prv_display_content(char * buffer,
+                                void * user_data)
+{
+    lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
+    int i;
+    for (i = 0; i < lwm2mH->numObject; i++) {
+        lwm2m_object_t * object = lwm2mH->objectList[i];
+        if (NULL != object->printFunc) {
+            object->printFunc(object);
+        }
+    }
+}
+
+static void prv_display_backup(char * buffer,
+                               void * user_data)
+{
+    lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
+    int i;
+    for (i = 0; i < lwm2mH->numObject; i++) {
+        lwm2m_object_t * object = lwm2mH->objectListBackup[i];
+        if (NULL != object->printFunc) {
+            object->printFunc(object);
+        }
+    }
+}
+
 #define OBJ_COUNT 7
 
 int main(int argc, char *argv[])
@@ -412,7 +438,9 @@ int main(int argc, char *argv[])
                                                         "   DATA: (optional) new value\r\n", prv_change, NULL},
             {"update", "Trigger a registration update", " update SERVER\r\n"
                                                         "   SERVER: short server id such as 123\r\n", prv_update, NULL},
-            {"boots", "Initiate a DI bootstrap process.", NULL, prv_initiate_bootstrap, NULL},
+            {"boots", "Initiate a DI bootstrap process", NULL, prv_initiate_bootstrap, NULL},
+            {"disp", "Display current objects/instances/resources", NULL, prv_display_content, NULL},
+            {"dispb", "Display current backup of objects/instances/resources", NULL, prv_display_backup, NULL},
             {"quit", "Quit the client gracefully.", NULL, prv_quit, NULL},
             {"^C", "Quit the client abruptly (without sending a de-register message).", NULL, NULL, NULL},
 
