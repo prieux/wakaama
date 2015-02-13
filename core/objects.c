@@ -429,7 +429,6 @@ static int prv_getMandatoryInfo(lwm2m_object_t * objectP,
     tlvP[0].id = LWM2M_SERVER_LIFETIME_ID;
     tlvP[1].id = LWM2M_SERVER_BINDING_ID;
 
-
     if (objectP->readFunc(instanceID, &size, &tlvP, objectP) != COAP_205_CONTENT)
     {
         lwm2m_free(tlvP);
@@ -476,6 +475,9 @@ int object_getServers(lwm2m_context_t * contextP)
     }
 
     securityInstP = securityObjP->instanceList;
+
+    LOG("Instance list: %u\r\n", securityInstP);
+
     while (securityInstP != NULL)
     {
         lwm2m_tlv_t * tlvP;

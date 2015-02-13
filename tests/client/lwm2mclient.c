@@ -326,7 +326,7 @@ syntax_error:
 static void prv_update(char * buffer,
                        void * user_data)
 {
-    lwm2m_context_t * lwm2mH = (lwm2m_context_t *) user_data;
+    lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
     if (buffer[0] == 0) goto syntax_error;
 
     uint16_t serverId = (uint16_t) atoi(buffer);
@@ -479,8 +479,7 @@ int main(int argc, char *argv[])
     char serverUri[50];
     int serverId = 123;
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
-    //objArray[0] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
-    objArray[0] = get_security_object(serverId, serverUri, true);
+    objArray[0] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
     if (NULL == objArray[0])
     {
         fprintf(stderr, "Failed to create security object\r\n");
