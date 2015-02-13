@@ -489,11 +489,15 @@ static lwm2m_object_t * prv_device_copy(lwm2m_object_t * objectP)
     return objectCopy;
 }
 
+static void prv_device_close(lwm2m_object_t * objectP) {
+    lwm2m_free(objectP->userData);
+}
+
 static void prv_device_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     device_data_t * data = (device_data_t *)objectP->userData;
-    LOG("  Device object: %x\r\n", data);
+    LOG("  /%u: Device object: %x\r\n", objectP->objID, data);
     if (NULL != data)
     {
         LOG("    time: %d, time_offset: %s\r\n",
@@ -530,6 +534,7 @@ lwm2m_object_t * get_object_device()
         deviceObj->writeFunc = prv_device_write;
         deviceObj->executeFunc = prv_device_execute;
         deviceObj->copyFunc = prv_device_copy;
+        deviceObj->closeFunc = prv_device_close;
         deviceObj->printFunc = prv_device_print;
         deviceObj->userData = lwm2m_malloc(sizeof(device_data_t));
 

@@ -279,13 +279,25 @@ static lwm2m_object_t * prv_test_copy(lwm2m_object_t * objectP)
     return objectCopy;
 }
 
+static void prv_test_close(lwm2m_object_t * objectP)
+{
+    lwm2m_free(objectP->userData);
+    prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
+    while (instance != NULL) {
+        prv_instance_t * previous_instance = instance;
+        instance = (prv_instance_t *)instance->next;
+        lwm2m_free(previous_instance);
+    }
+}
+
 static void prv_test_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("  Test object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
+    LOG("  /%u: Test object: %x, instanceList: %x\r\n", objectP->objID, objectP, objectP->instanceList);
     prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
     while (instance != NULL) {
-        LOG("    instance: %x, shortId: %u, test: %u\r\n",
+        LOG("    /%u/%u: instance: %x, shortId: %u, test: %u\r\n",
+                objectP->objID, instance->shortID,
                 instance, instance->shortID, instance->test);
         instance = (prv_instance_t *)instance->next;
     }
@@ -324,9 +336,10 @@ lwm2m_object_t * get_test_object()
          */
         testObj->readFunc = prv_read;
         testObj->writeFunc = prv_write;
+        testObj->executeFunc = prv_exec;
         testObj->createFunc = prv_create;
         testObj->deleteFunc = prv_delete;
-        testObj->executeFunc = prv_exec;
+        testObj->closeFunc = prv_test_close;
         testObj->copyFunc = prv_test_copy;
         testObj->printFunc = prv_test_print;
     }

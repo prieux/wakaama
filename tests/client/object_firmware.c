@@ -241,11 +241,15 @@ static lwm2m_object_t * prv_firmware_copy(lwm2m_object_t * objectP)
     return objectCopy;
 }
 
+static void prv_firmware_close(lwm2m_object_t * objectP) {
+    lwm2m_free(objectP->userData);
+}
+
 static void prv_firmware_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     firmware_data_t * data = (firmware_data_t *)objectP->userData;
-    LOG("  Firmware object: %x\r\n", data);
+    LOG("  /%u: Firmware object: %x\r\n", objectP->objID, data);
     if (NULL != data)
     {
         LOG("    state: %u, supported: %u, result: %u\r\n",
@@ -281,6 +285,7 @@ lwm2m_object_t * get_object_firmware()
         firmwareObj->readFunc = prv_firmware_read;
         firmwareObj->writeFunc = prv_firmware_write;
         firmwareObj->executeFunc = prv_firmware_execute;
+        firmwareObj->closeFunc = prv_firmware_close;
         firmwareObj->copyFunc = prv_firmware_copy;
         firmwareObj->printFunc = prv_firmware_print;
         firmwareObj->userData = malloc(sizeof(firmware_data_t));

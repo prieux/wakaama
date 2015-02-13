@@ -213,7 +213,17 @@ static uint8_t prv_security_write(uint16_t instanceId,
     if (NULL == targetP)
     {
         LOG("    >>>> Object with instanceID: %u not found\r\n", instanceId);
-        return COAP_404_NOT_FOUND;
+        if (bootstrapPending == true) {
+            targetP = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
+            if (NULL == targetP) return COAP_500_INTERNAL_SERVER_ERROR;
+            memset(targetP, 0, sizeof(security_instance_t));
+            targetP->instanceId = instanceId;
+            objectP->instanceList = LWM2M_LIST_ADD(objectP->instanceList, targetP);
+            LOG("    >>>> new instance created: /%u/%u\r\n", objectP->objID, targetP->instanceId);
+        }
+        else {
+            return COAP_404_NOT_FOUND;
+        }
     }
 
     i = 0;
@@ -415,10 +425,11 @@ static lwm2m_object_t * prv_security_copy(lwm2m_object_t * objectP)
 static void prv_security_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("  Security object: %x, instanceList: %x\r\n", objectP, objectP->instanceList);
+    LOG("  /%u: Security object: %x, instanceList: %x\r\n", objectP->objID, objectP, objectP->instanceList);
     security_instance_t * instance = (security_instance_t *)objectP->instanceList;
     while (instance != NULL) {
-        LOG("    instance: %x, instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
+        LOG("    /%u/%u: instance: %x, instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
+                objectP->objID, instance->instanceId,
                 instance, instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false", instance->shortID);
         instance = (security_instance_t *)instance->next;
     }
