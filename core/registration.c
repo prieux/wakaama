@@ -280,6 +280,8 @@ static int prv_update_registration(lwm2m_context_t * contextP, lwm2m_server_t * 
     transaction = transaction_new(COAP_PUT, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)server);
     if (transaction == NULL) return INTERNAL_SERVER_ERROR_5_00;
 
+    LOG("server location: %u\r\n", server->location);
+
     coap_set_header_uri_path(transaction->message, server->location);
 
     transaction->callback = prv_handleRegistrationUpdateReply;
@@ -298,9 +300,13 @@ static int prv_update_registration(lwm2m_context_t * contextP, lwm2m_server_t * 
 // update the registration of a given server
 int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID)
 {
-    // look for the server
     lwm2m_server_t * targetP;
+
     targetP = contextP->serverList;
+    if (targetP == NULL) {
+        object_getServers(contextP);
+    }
+    LOG("targetP: %u\r\n", targetP);
     while (targetP != NULL)
     {
         if (targetP->shortID == shortServerID)
