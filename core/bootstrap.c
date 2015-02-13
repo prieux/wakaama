@@ -59,7 +59,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef LWM2M_CLIENT_MODE
+//#ifdef LWM2M_CLIENT_MODE
 
 #define PRV_QUERY_BUFFER_LENGTH 200
 
@@ -130,6 +130,11 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
             {
                 bootstrapServer->mid = transaction->mID;
                 LOG("DI bootstrap requested to BS server\r\n");
+                /*
+                 * TODO: starting here, we'll need to archive the object configuration in case of network or
+                 * botstrap server failure
+                 */
+                lwm2m_backup_objects(contextP);
             }
         }
         else
@@ -147,11 +152,6 @@ void handle_bootstrap(lwm2m_context_t * contextP,
     if (COAP_204_CHANGED == message->code) {
         contextP->bsState = BOOTSTRAP_PENDING;
         LOG("    Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
-        /*
-         * TODO: starting here, we'll need to archive the object configuration in case of network or
-         * botstrap server failure
-         */
-        lwm2m_backup_objects(contextP);
     }
     else
     {
@@ -161,4 +161,4 @@ void handle_bootstrap(lwm2m_context_t * contextP,
     }
 }
 
-#endif
+//#endif

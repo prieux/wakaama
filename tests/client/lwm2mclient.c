@@ -375,7 +375,7 @@ static void update_battery_level(lwm2m_context_t * context,
 static void prv_initiate_bootstrap(char * buffer,
                                    void * user_data)
 {
-    lwm2m_context_t * lwm2mH = (lwm2m_context_t *) user_data;
+    lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
     lwm2mH->bsState = BOOTSTRAP_REQUESTED;
 }
 
@@ -384,10 +384,12 @@ static void prv_display_content(char * buffer,
 {
     lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
     int i;
-    for (i = 0; i < lwm2mH->numObject; i++) {
-        lwm2m_object_t * object = lwm2mH->objectList[i];
-        if (NULL != object->printFunc) {
-            object->printFunc(object);
+    if (NULL != lwm2mH->objectList) {
+        for (i = 0; i < lwm2mH->numObject; i++) {
+            lwm2m_object_t * object = lwm2mH->objectList[i];
+            if (NULL != object->printFunc) {
+                object->printFunc(object);
+            }
         }
     }
 }
@@ -397,10 +399,12 @@ static void prv_display_backup(char * buffer,
 {
     lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
     int i;
-    for (i = 0; i < lwm2mH->numObject; i++) {
-        lwm2m_object_t * object = lwm2mH->objectListBackup[i];
-        if (NULL != object->printFunc) {
-            object->printFunc(object);
+    if (NULL != lwm2mH->objectListBackup) {
+        for (i = 0; i < lwm2mH->numObject; i++) {
+            lwm2m_object_t * object = lwm2mH->objectListBackup[i];
+            if (NULL != object->printFunc) {
+                object->printFunc(object);
+            }
         }
     }
 }
@@ -472,49 +476,50 @@ int main(int argc, char *argv[])
      * Now the main function fill an array with each object, this list will be later passed to liblwm2m.
      * Those functions are located in their respective object file.
      */
-    objArray[0] = get_object_device();
+    char serverUri[50];
+    int serverId = 123;
+    sprintf (serverUri, "coap://%s:%s", server, serverPort);
+    //objArray[0] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
+    objArray[0] = get_security_object(serverId, serverUri, true);
     if (NULL == objArray[0])
     {
-        fprintf(stderr, "Failed to create Device object\r\n");
+        fprintf(stderr, "Failed to create security object\r\n");
         return -1;
     }
+    data.securityObjP = objArray[0];
 
-    objArray[1] = get_object_firmware();
+    objArray[1] = get_server_object(serverId, "U", lifetime, false);
     if (NULL == objArray[1])
-    {
-        fprintf(stderr, "Failed to create Firmware object\r\n");
-        return -1;
-    }
-
-    objArray[2] = get_test_object();
-    if (NULL == objArray[2])
-    {
-        fprintf(stderr, "Failed to create test object\r\n");
-        return -1;
-    }
-
-    int serverId = 123;
-    objArray[3] = get_server_object(serverId, "U", lifetime, false);
-    if (NULL == objArray[3])
     {
         fprintf(stderr, "Failed to create server object\r\n");
         return -1;
     }
 
-    char serverUri[50];
-    sprintf (serverUri, "coap://%s:%s", server, serverPort);
-    objArray[4] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
-    if (NULL == objArray[4])
+    objArray[2] = get_object_device();
+    if (NULL == objArray[2])
     {
-        fprintf(stderr, "Failed to create security object\r\n");
+        fprintf(stderr, "Failed to create Device object\r\n");
         return -1;
     }
-    data.securityObjP = objArray[4];
 
-    objArray[5] = get_object_location();
-    if (NULL == objArray[5])
+    objArray[3] = get_object_firmware();
+    if (NULL == objArray[3])
+    {
+        fprintf(stderr, "Failed to create Firmware object\r\n");
+        return -1;
+    }
+
+    objArray[4] = get_object_location();
+    if (NULL == objArray[4])
     {
         fprintf(stderr, "Failed to create location object\r\n");
+        return -1;
+    }
+
+    objArray[5] = get_test_object();
+    if (NULL == objArray[5])
+    {
+        fprintf(stderr, "Failed to create test object\r\n");
         return -1;
     }
 

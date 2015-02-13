@@ -105,7 +105,9 @@ static void handle_ack(lwm2m_context_t * contextP,
                          coap_packet_t * message)
 {
 #ifdef LWM2M_CLIENT_MODE
-    handle_bootstrap(contextP, message, fromSessionH);
+    if (contextP->bsState == BOOTSTRAP_INITIATED) {
+        handle_bootstrap(contextP, message, fromSessionH);
+    }
 #endif
 }
 

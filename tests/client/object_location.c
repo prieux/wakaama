@@ -189,11 +189,15 @@ static lwm2m_object_t * prv_location_copy(lwm2m_object_t * objectP)
     return objectCopy;
 }
 
+static void prv_location_close(lwm2m_object_t * objectP) {
+    lwm2m_free(objectP->userData);
+}
+
 static void prv_location_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     location_data_t * data = (location_data_t *)objectP->userData;
-    LOG("  Location object: %x\r\n", data);
+    LOG("  /%u: Location object: %x\r\n", objectP->objID, data);
     if (NULL != data)
     {
         LOG("    lat: %s, lon: %s, alt: %s, uncertainty: %s, timestamp: %u\r\n",
@@ -278,6 +282,7 @@ lwm2m_object_t * get_object_location() {
     //locationObj->executeFunc = prv_location_execute;
     //locationObj->createFunc  = prv_location_create;
     //locationObj->deleteFunc  = prv_location_delete;
+    locationObj->closeFunc   = prv_location_close;
     locationObj->copyFunc    = prv_location_copy;
     locationObj->printFunc   = prv_location_print;
     locationObj->userData    = lwm2m_malloc(sizeof(location_data_t));

@@ -132,7 +132,9 @@ connection_t * connection_create(connection_t * connList,
             }
         }
     }
-
+    if (NULL != servinfo) {
+        free(servinfo);
+    }
     if (s >= 0)
     {
         connP = connection_new_incoming(connList, sock, sa, sl);
