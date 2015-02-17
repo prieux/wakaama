@@ -225,7 +225,6 @@ static int prv_register(lwm2m_context_t * contextP, lwm2m_server_t * server)
 
 int lwm2m_start(lwm2m_context_t * contextP)
 {
-    lwm2m_server_t * targetP;
     int result;
 
     result = object_getServers(contextP);
@@ -280,7 +279,7 @@ static int prv_update_registration(lwm2m_context_t * contextP, lwm2m_server_t * 
     transaction = transaction_new(COAP_PUT, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)server);
     if (transaction == NULL) return INTERNAL_SERVER_ERROR_5_00;
 
-    LOG("server location: %u\r\n", server->location);
+    LOG("server location: %s\r\n", server->location);
 
     coap_set_header_uri_path(transaction->message, server->location);
 
@@ -303,12 +302,17 @@ int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID
     lwm2m_server_t * targetP;
 
     targetP = contextP->serverList;
+    LOG("Initial targetP: %x\r\n", targetP);
     if (targetP == NULL) {
-        object_getServers(contextP);
+        if (object_getServers(contextP) == -1) {
+            return NOT_FOUND_4_04;
+        }
     }
-    LOG("targetP: %u\r\n", targetP);
+    targetP = contextP->serverList;
+    LOG("Second initial targetP: %x\r\n", targetP);
     while (targetP != NULL)
     {
+        LOG("targetP: %x\r\n", targetP);
         if (targetP->shortID == shortServerID)
         {
             // found the server, trigger the update transaction
@@ -338,11 +342,13 @@ int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime,
                 needBootstrap = false;
                 if (targetP->registration + targetP->lifetime - timeoutP->tv_sec <= currentTime)
                 {
+                    LOG("About to update registrations...\r\n");
                     prv_update_registration(contextP, targetP);
                 }
                 break;
             case STATE_DEREGISTERED:
                 // TODO: is it disabled?
+                LOG("About to register...\r\n");
                 prv_register(contextP, targetP);
                 break;
             case STATE_REG_PENDING:

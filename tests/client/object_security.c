@@ -65,6 +65,7 @@ typedef struct _security_instance_
     char *                       uri;
     bool                         isBootstrap;
     uint16_t                     shortID;
+    uint32_t                     clientHoldOffTime;
 } security_instance_t;
 
 static uint8_t prv_get_value(lwm2m_tlv_t * tlvP,
@@ -142,7 +143,7 @@ static uint8_t prv_get_value(lwm2m_tlv_t * tlvP,
         else return COAP_500_INTERNAL_SERVER_ERROR;
 
     case LWM2M_SECURITY_HOLD_OFF_ID:
-        lwm2m_tlv_encode_int(30, tlvP);
+        lwm2m_tlv_encode_int(targetP->clientHoldOffTime, tlvP);
         if (0 != tlvP->length) return COAP_205_CONTENT;
         else return COAP_500_INTERNAL_SERVER_ERROR;
 
@@ -381,13 +382,12 @@ static void prv_security_close(lwm2m_object_t * objectP)
 {
     while (objectP->instanceList != NULL)
     {
-        security_instance_t * targetP;
-
-        targetP = (security_instance_t *)objectP->instanceList;
+        security_instance_t * securityInstance = (security_instance_t *)objectP->instanceList;
         objectP->instanceList = objectP->instanceList->next;
-
-        lwm2m_free(targetP->uri);
-        lwm2m_free(targetP);
+        if (NULL != securityInstance->uri) {
+            lwm2m_free(securityInstance->uri);
+        }
+        lwm2m_free(securityInstance);
     }
 }
 
@@ -464,6 +464,7 @@ lwm2m_object_t * get_security_object(int serverId, const char* serverUri, bool i
         strcpy(targetP->uri, serverUri);
         targetP->isBootstrap = isBootstrap;
         targetP->shortID = serverId;
+        targetP->clientHoldOffTime = 10;
 
         securityObj->instanceList = LWM2M_LIST_ADD(securityObj->instanceList, targetP);
 
@@ -485,11 +486,15 @@ char * get_server_uri(lwm2m_object_t * objectP,
     security_instance_t * targetP;
 
     targetP = (security_instance_t *)objectP->instanceList;
+    LOG("***** security object instance: %x\r\n", targetP);
     while (targetP != NULL)
     {
         if (targetP->shortID == serverID)
         {
             return strdup(targetP->uri);
+        }
+        else {
+            targetP = targetP->next;
         }
     }
 

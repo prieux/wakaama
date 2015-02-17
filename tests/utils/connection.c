@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "connection.h"
-
+#include "internals.h"
 
 int create_socket(char * portStr)
 {
@@ -86,6 +86,8 @@ connection_t * connection_new_incoming(connection_t * connList,
     if (connP != NULL)
     {
         connP->sock = sock;
+        LOG("***** connP->addr: %x, addr: %x, addrLen: %u\r\n",
+                &(connP->addr), addr, addrLen);
         memcpy(&(connP->addr), addr, addrLen);
         connP->addrLen = addrLen;
         connP->next = connList;

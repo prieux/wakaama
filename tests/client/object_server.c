@@ -328,9 +328,7 @@ static void prv_server_close(lwm2m_object_t * objectP)
 {
     while (objectP->instanceList != NULL)
     {
-        server_instance_t * serverInstance;
-
-        serverInstance = (server_instance_t *)objectP->instanceList;
+        server_instance_t * serverInstance = (server_instance_t *)objectP->instanceList;
         objectP->instanceList = objectP->instanceList->next;
 
         lwm2m_free(serverInstance);
