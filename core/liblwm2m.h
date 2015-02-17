@@ -489,6 +489,7 @@ typedef struct
     int    socket;
 #ifdef LWM2M_CLIENT_MODE
     lwm2m_bootstrap_state_t bsState;
+    struct timeval      bsStart;
     char *              endpointName;
     char *              msisdn;
     lwm2m_server_t *    bootstrapServerList;
@@ -496,6 +497,7 @@ typedef struct
     lwm2m_object_t **   objectList;
     lwm2m_object_t **   objectListBackup;
     uint16_t            numObject;
+    uint16_t            numObjectBackup;
     lwm2m_observed_t *  observedList;
 #endif
 #ifdef LWM2M_SERVER_MODE

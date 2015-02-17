@@ -304,6 +304,19 @@ coap_status_t object_delete(lwm2m_context_t * contextP,
     return targetP->deleteFunc(uriP->instanceId, targetP);
 }
 
+coap_status_t object_delete_all(lwm2m_context_t * contextP)
+{
+    LOG("    Call to object_delete_all\r\n");
+
+    close_server_list(contextP);
+    close_bootstrap_server_list(contextP);
+    close_observed_list(contextP);
+    close_objects_lists(contextP->objectList, contextP->numObject);
+    contextP->numObject = 0;
+
+    return DELETED_2_02;
+}
+
 bool object_isInstanceNew(lwm2m_context_t * contextP,
                           uint16_t objectId,
                           uint16_t instanceId)
@@ -476,7 +489,7 @@ int object_getServers(lwm2m_context_t * contextP)
 
     securityInstP = securityObjP->instanceList;
 
-    LOG("Instance list: %u\r\n", securityInstP);
+    LOG("***** Security instance list: %x\r\n", securityInstP);
 
     while (securityInstP != NULL)
     {
@@ -486,15 +499,17 @@ int object_getServers(lwm2m_context_t * contextP)
         bool isBootstrap;
         int64_t value = 0;
 
-        size = 3;
+        size = 4;
         tlvP = lwm2m_tlv_new(size);
         if (tlvP == NULL) return -1;
-        tlvP[0].id = LWM2M_SECURITY_BOOTSTRAP_ID;
-        tlvP[1].id = LWM2M_SECURITY_SHORT_SERVER_ID;
-        tlvP[2].id = LWM2M_SECURITY_HOLD_OFF_ID;
+        tlvP[0].id = LWM2M_SECURITY_URI_ID;
+        tlvP[1].id = LWM2M_SECURITY_BOOTSTRAP_ID;
+        tlvP[2].id = LWM2M_SECURITY_SHORT_SERVER_ID;
+        tlvP[3].id = LWM2M_SECURITY_HOLD_OFF_ID;
 
         if (securityObjP->readFunc(securityInstP->id, &size, &tlvP, securityObjP) != COAP_205_CONTENT)
         {
+            lwm2m_free(tlvP->value);
             lwm2m_free(tlvP);
             return -1;
         }
@@ -503,17 +518,19 @@ int object_getServers(lwm2m_context_t * contextP)
         if (targetP == NULL) return -1;
         memset(targetP, 0, sizeof(lwm2m_server_t));
 
-        if (0 == lwm2m_tlv_decode_bool(tlvP + 0, &isBootstrap))
+        if (0 == lwm2m_tlv_decode_bool(tlvP + 1, &isBootstrap))
         {
             lwm2m_free(targetP);
+            lwm2m_free(tlvP->value);
             lwm2m_free(tlvP);
             return -1;
         }
 
-        if (0 == lwm2m_tlv_decode_int(tlvP + 1, &value)
+        if (0 == lwm2m_tlv_decode_int(tlvP + 2, &value)
          || value <= 0 || value > 0xFFFF)                // 0 is forbidden as a Short Server ID
         {
             lwm2m_free(targetP);
+            lwm2m_free(tlvP->value);
             lwm2m_free(tlvP);
             return -1;
         }
@@ -521,10 +538,11 @@ int object_getServers(lwm2m_context_t * contextP)
 
         if (isBootstrap == true)
         {
-            if (0 == lwm2m_tlv_decode_int(tlvP + 1, &value)
+            if (0 == lwm2m_tlv_decode_int(tlvP + 3, &value)
              || value < 0 || value > 0xFFFFFFFF)             // This is an implementation limit
             {
                 lwm2m_free(targetP);
+                lwm2m_free(tlvP->value);
                 lwm2m_free(tlvP);
                 return -1;
             }
@@ -540,15 +558,21 @@ int object_getServers(lwm2m_context_t * contextP)
             if (serverInstP == NULL)
             {
                 lwm2m_free(targetP);
+                lwm2m_free(tlvP->value);
                 lwm2m_free(tlvP);
                 return -1;
             }
             if (0 != prv_getMandatoryInfo(serverObjP, serverInstP->id, targetP))
             {
                 lwm2m_free(targetP);
+                lwm2m_free(tlvP->value);
                 lwm2m_free(tlvP);
                 return -1;
             }
+
+            targetP->location = lwm2m_malloc((tlvP->length + 1) * sizeof(char));
+            memset(targetP->location, 0, tlvP->length + 1);
+            strncpy(targetP->location, tlvP->value, tlvP->length); // tlvP = tlvP + 0 (first element)
 
             contextP->serverList = (lwm2m_server_t*)LWM2M_LIST_ADD(contextP->serverList, targetP);
         }

@@ -135,6 +135,7 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
                  * botstrap server failure
                  */
                 lwm2m_backup_objects(contextP);
+                close_server_list(contextP);
             }
         }
         else
@@ -150,8 +151,15 @@ void handle_bootstrap(lwm2m_context_t * contextP,
                       void * fromSessionH)
 {
     if (COAP_204_CHANGED == message->code) {
+        struct timeval tv;
+
         contextP->bsState = BOOTSTRAP_PENDING;
         LOG("    Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
+
+        // TODO extract method?
+        lwm2m_gettimeofday(&tv, NULL);
+        // reset bootstrap timeout timer
+        contextP->bsStart.tv_sec = tv.tv_sec;
     }
     else
     {

@@ -120,7 +120,9 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
     coap_status_t result = NOT_FOUND_4_04;
 
     uriP = lwm2m_decode_uri(message->uri_path);
-    if (uriP == NULL) return BAD_REQUEST_4_00;
+    if (uriP == NULL) {
+        return BAD_REQUEST_4_00;
+    }
     
     LOG("    Uri flag: %u, objectId: %u, instanceId:%u, resourceId:%u\r\n", uriP->flag, uriP->objectId, uriP->instanceId, uriP->resourceId);
 
@@ -131,6 +133,11 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
         // TODO: Authentify server
         LOG("    Flag DM\r\n");
         result = handle_dm_request(contextP, uriP, fromSessionH, message, response);
+        break;
+
+    case LWM2M_URI_FLAG_DELETE_ALL:
+        LOG("    Flag delete all instances\r\n");
+        result = handle_delete_all(contextP, fromSessionH, message, response);
         break;
 
     case LWM2M_URI_FLAG_BOOTSTRAP:
