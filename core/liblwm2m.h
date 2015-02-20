@@ -291,7 +291,7 @@ typedef uint8_t (*lwm2m_execute_callback_t) (uint16_t instanceId, uint16_t resou
 typedef uint8_t (*lwm2m_create_callback_t) (uint16_t instanceId, int numData, lwm2m_tlv_t * dataArray, lwm2m_object_t * objectP);
 typedef uint8_t (*lwm2m_delete_callback_t) (uint16_t instanceId, lwm2m_object_t * objectP);
 typedef void (*lwm2m_close_callback_t) (lwm2m_object_t * objectP);
-typedef lwm2m_object_t * (*lwm2m_copy_callback_t) (lwm2m_object_t * objectP);
+typedef void (*lwm2m_copy_callback_t) (lwm2m_object_t * objectDest, lwm2m_object_t * objectSrc);
 typedef void (*lwm2m_print_callback_t) (lwm2m_object_t * objectP);
 
 
@@ -466,12 +466,12 @@ typedef struct _lwm2m_observed_
 } lwm2m_observed_t;
 
 typedef enum {
-    NOT_BOOTSTRAPED = 0,
+    NOT_BOOTSTRAPPED = 0,
     BOOTSTRAP_REQUESTED,
     BOOTSTRAP_INITIATED,
     BOOTSTRAP_PENDING,
     BOOTSTRAP_FAILED,
-    BOOTSTRAPED
+    BOOTSTRAPPED
 } lwm2m_bootstrap_state_t;
 
 /*
@@ -534,17 +534,18 @@ int lwm2m_configure(lwm2m_context_t * contextP, char * endpointName, char * msis
 // create objects for known LWM2M Servers.
 int lwm2m_start(lwm2m_context_t * contextP);
 
-// initiate a bootstrap session
+// manage a bootstrap session
 int lwm2m_bootstrap(lwm2m_context_t * contextP);
+void lwm2m_update_bootstrap_state(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP);
 
-// backup objects configuration and content (during bootstrap)
+// backup objects (0 and 1) configuration and content (during bootstrap)
 void lwm2m_backup_objects(lwm2m_context_t * contextP);
 
-// restore objects configuration and content (in case of bootstrap failure)
+// restore objects (0 and 1) configuration and content (in case of bootstrap failure)
 void lwm2m_restore_objects(lwm2m_context_t * contextP);
 
 // check if the server registrations are outdated and needs to be renewed
-int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP);
+int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP, bool refreshServerList);
 
 // send a registration update to the server specified by the server short identifier
 int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID);

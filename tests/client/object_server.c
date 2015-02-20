@@ -170,9 +170,20 @@ static uint8_t prv_server_write(uint16_t instanceId,
 
     targetP = (server_instance_t *)lwm2m_list_find(objectP->instanceList, instanceId);
     if (NULL == targetP) {
-        // TODO: manage object creation in case of a bootstrap sequence
-        LOG("    >>>> instance not found\r\n");
-        return COAP_404_NOT_FOUND;
+        LOG("    >>>> Object with instanceID: %u not found\r\n", instanceId);
+        if (bootstrapPending == true) {
+            targetP = (server_instance_t *)lwm2m_malloc(sizeof(server_instance_t));
+            if (NULL == targetP) {
+                return COAP_500_INTERNAL_SERVER_ERROR;
+            }
+            memset(targetP, 0, sizeof(server_instance_t));
+            targetP->instanceId = instanceId;
+            objectP->instanceList = LWM2M_LIST_ADD(objectP->instanceList, targetP);
+            LOG("    >>>> new instance created: /%u/%u\r\n", objectP->objID, targetP->instanceId);
+        }
+        else {
+            return COAP_404_NOT_FOUND;
+        }
     }
 
     i = 0;
@@ -322,46 +333,38 @@ static uint8_t prv_server_create(uint16_t instanceId,
     return result;
 }
 
-static void prv_server_close(lwm2m_object_t * objectP)
-{
-    while (objectP->instanceList != NULL)
-    {
-        server_instance_t * serverInstance = (server_instance_t *)objectP->instanceList;
-        objectP->instanceList = objectP->instanceList->next;
-
+static void prv_server_close(lwm2m_object_t * object) {
+    while (object->instanceList != NULL) {
+        server_instance_t * serverInstance = (server_instance_t *)object->instanceList;
+        object->instanceList = object->instanceList->next;
         lwm2m_free(serverInstance);
     }
 }
 
-static lwm2m_object_t * prv_server_copy(lwm2m_object_t * objectP)
+static void prv_server_copy(lwm2m_object_t * objectDest, lwm2m_object_t * objectSrc)
 {
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy) {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->instanceList = NULL;
-        objectCopy->userData = NULL;
-        server_instance_t * instance = (server_instance_t *)objectP->instanceList;
-        server_instance_t * previousInstanceCopy = NULL;
-        while (instance != NULL) {
-            server_instance_t * instanceCopy = (server_instance_t *)lwm2m_malloc(sizeof(server_instance_t));
-            if (NULL == instanceCopy) {
-                lwm2m_free(objectCopy);
-                return NULL;
-            }
-            memcpy(instanceCopy, instance, sizeof(server_instance_t));
-            // not sure it's necessary:
-            strcpy(instanceCopy->binding, instance->binding);
-            instance = (server_instance_t *)instance->next;
-            if (previousInstanceCopy == NULL) {
-                objectCopy->instanceList = (lwm2m_list_t *)instanceCopy;
-            }
-            else {
-                previousInstanceCopy->next = instanceCopy;
-            }
-            previousInstanceCopy = instanceCopy;
+    memcpy(objectDest, objectSrc, sizeof(lwm2m_object_t));
+    objectDest->instanceList = NULL;
+    objectDest->userData = NULL;
+    server_instance_t * instanceSrc = (server_instance_t *)objectSrc->instanceList;
+    server_instance_t * previousInstanceDest = NULL;
+    while (instanceSrc != NULL) {
+        server_instance_t * instanceDest = (server_instance_t *)lwm2m_malloc(sizeof(server_instance_t));
+        if (NULL == instanceDest) {
+            return;
         }
+        memcpy(instanceDest, instanceSrc, sizeof(server_instance_t));
+        // not sure it's necessary:
+        strcpy(instanceDest->binding, instanceSrc->binding);
+        instanceSrc = (server_instance_t *)instanceSrc->next;
+        if (previousInstanceDest == NULL) {
+            objectDest->instanceList = (lwm2m_list_t *)instanceDest;
+        }
+        else {
+            previousInstanceDest->next = instanceDest;
+        }
+        previousInstanceDest = instanceDest;
     }
-    return objectCopy;
 }
 
 static void prv_server_print(lwm2m_object_t * objectP)

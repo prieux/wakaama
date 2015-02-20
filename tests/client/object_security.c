@@ -211,12 +211,13 @@ static uint8_t prv_security_write(uint16_t instanceId,
     uint8_t result = COAP_204_CHANGED;
 
     targetP = (security_instance_t *)lwm2m_list_find(objectP->instanceList, instanceId);
-    if (NULL == targetP)
-    {
+    if (NULL == targetP) {
         LOG("    >>>> Object with instanceID: %u not found\r\n", instanceId);
         if (bootstrapPending == true) {
             targetP = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
-            if (NULL == targetP) return COAP_500_INTERNAL_SERVER_ERROR;
+            if (NULL == targetP) {
+                return COAP_500_INTERNAL_SERVER_ERROR;
+            }
             memset(targetP, 0, sizeof(security_instance_t));
             targetP->instanceId = instanceId;
             objectP->instanceList = LWM2M_LIST_ADD(objectP->instanceList, targetP);
@@ -228,32 +229,26 @@ static uint8_t prv_security_write(uint16_t instanceId,
     }
 
     i = 0;
-    do
-    {
-        switch (dataArray[i].id)
-        {
+    do {
+        switch (dataArray[i].id) {
         case LWM2M_SECURITY_URI_ID:
             if (targetP->uri != NULL) lwm2m_free(targetP->uri);
             targetP->uri = (char *)lwm2m_malloc(dataArray[i].length + 1);
             memset(targetP->uri, 0, dataArray[i].length + 1);
-            if (targetP->uri != NULL)
-            {
+            if (targetP->uri != NULL) {
                 strncpy(targetP->uri, dataArray[i].value, dataArray[i].length);
                 result = COAP_204_CHANGED;
             }
-            else
-            {
+            else {
                 result = COAP_500_INTERNAL_SERVER_ERROR;
             }
             break;
 
         case LWM2M_SECURITY_BOOTSTRAP_ID:
-            if (1 == lwm2m_tlv_decode_bool(dataArray + i, &(targetP->isBootstrap)))
-            {
+            if (1 == lwm2m_tlv_decode_bool(dataArray + i, &(targetP->isBootstrap))) {
                 result = COAP_204_CHANGED;
             }
-            else
-            {
+            else {
                 result = COAP_400_BAD_REQUEST;
             }
             break;
@@ -302,20 +297,16 @@ static uint8_t prv_security_write(uint16_t instanceId,
         {
             int64_t value;
 
-            if (1 == lwm2m_tlv_decode_int(dataArray + i, &value))
-            {
-                if (value >= 0 && value <= 0xFFFF)
-                {
+            if (1 == lwm2m_tlv_decode_int(dataArray + i, &value)) {
+                if (value >= 0 && value <= 0xFFFF) {
                     targetP->shortID = value;
                     result = COAP_204_CHANGED;
                 }
-                else
-                {
+                else {
                     result = COAP_406_NOT_ACCEPTABLE;
                 }
             }
-            else
-            {
+            else {
                 result = COAP_400_BAD_REQUEST;
             }
         }
@@ -391,35 +382,30 @@ static void prv_security_close(lwm2m_object_t * objectP)
     }
 }
 
-static lwm2m_object_t * prv_security_copy(lwm2m_object_t * objectP)
+static void prv_security_copy(lwm2m_object_t * objectDest, lwm2m_object_t * objectSrc)
 {
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy) {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->instanceList = NULL;
-        objectCopy->userData = NULL;
-        security_instance_t * instance = (security_instance_t *)objectP->instanceList;
-        security_instance_t * previousInstanceCopy = NULL;
-        while (instance != NULL) {
-            security_instance_t * instanceCopy = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
-            if (NULL == instanceCopy) {
-                lwm2m_free(objectCopy);
-                return NULL;
-            }
-            memcpy(instanceCopy, instance, sizeof(security_instance_t));
-            instanceCopy->uri = (char*)lwm2m_malloc(strlen(instance->uri) + 1);
-            strcpy(instanceCopy->uri, instance->uri);
-            instance = (security_instance_t *)instance->next;
-            if (previousInstanceCopy == NULL) {
-                objectCopy->instanceList = (lwm2m_list_t *)instanceCopy;
-            }
-            else {
-                previousInstanceCopy->next = instanceCopy;
-            }
-            previousInstanceCopy = instanceCopy;
+    memcpy(objectDest, objectSrc, sizeof(lwm2m_object_t));
+    objectDest->instanceList = NULL;
+    objectDest->userData = NULL;
+    security_instance_t * instanceSrc = (security_instance_t *)objectSrc->instanceList;
+    security_instance_t * previousInstanceDest = NULL;
+    while (instanceSrc != NULL) {
+        security_instance_t * instanceDest = (security_instance_t *)lwm2m_malloc(sizeof(security_instance_t));
+        if (NULL == instanceDest) {
+            return;
         }
+        memcpy(instanceDest, instanceSrc, sizeof(security_instance_t));
+        instanceDest->uri = (char*)lwm2m_malloc(strlen(instanceSrc->uri) + 1);
+        strcpy(instanceDest->uri, instanceSrc->uri);
+        instanceSrc = (security_instance_t *)instanceSrc->next;
+        if (previousInstanceDest == NULL) {
+            objectDest->instanceList = (lwm2m_list_t *)instanceDest;
+        }
+        else {
+            previousInstanceDest->next = instanceDest;
+        }
+        previousInstanceDest = instanceDest;
     }
-    return objectCopy;
 }
 
 static void prv_security_print(lwm2m_object_t * objectP)
@@ -486,7 +472,6 @@ char * get_server_uri(lwm2m_object_t * objectP,
     security_instance_t * targetP;
 
     targetP = (security_instance_t *)objectP->instanceList;
-    LOG("***** security object instance: %x\r\n", targetP);
     while (targetP != NULL)
     {
         if (targetP->shortID == serverID)

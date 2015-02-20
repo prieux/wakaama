@@ -273,43 +273,22 @@ static uint8_t prv_exec(uint16_t instanceId,
     }
 }
 
-static lwm2m_object_t * prv_test_copy(lwm2m_object_t * objectP)
+static void prv_test_close(lwm2m_object_t * object)
 {
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy) {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->instanceList = NULL;
-        objectCopy->userData = NULL;
-        prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
-        prv_instance_t * previousInstanceCopy = NULL;
-        while (instance != NULL) {
-            prv_instance_t * instanceCopy = (prv_instance_t *)lwm2m_malloc(sizeof(prv_instance_t));
-            if (NULL == instanceCopy) {
-                lwm2m_free(objectCopy);
-                return NULL;
-            }
-            memcpy(instanceCopy, instance, sizeof(prv_instance_t));
-            instance = (prv_instance_t *)instance->next;
-            if (previousInstanceCopy == NULL) {
-                objectCopy->instanceList = (lwm2m_list_t *)instanceCopy;
-            }
-            else {
-                previousInstanceCopy->next = instanceCopy;
-            }
-            previousInstanceCopy = instanceCopy;
-        }
+    if (object->userData != NULL) {
+        lwm2m_free(object->userData);
+        object->userData = NULL;
     }
-    return objectCopy;
-}
-
-static void prv_test_close(lwm2m_object_t * objectP)
-{
-    lwm2m_free(objectP->userData);
-    prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
-    while (instance != NULL) {
-        prv_instance_t * previous_instance = instance;
-        instance = (prv_instance_t *)instance->next;
-        lwm2m_free(previous_instance);
+    if (NULL != object->instanceList) {
+        prv_instance_t * instance = (prv_instance_t *)object->instanceList;
+        while (instance != NULL) {
+            prv_instance_t * previous_instance = instance;
+            instance = (prv_instance_t *)instance->next;
+            if (NULL != previous_instance) {
+                lwm2m_free(previous_instance);
+                previous_instance = NULL;
+            }
+        }
     }
 }
 
@@ -364,7 +343,6 @@ lwm2m_object_t * get_test_object()
         testObj->createFunc = prv_create;
         testObj->deleteFunc = prv_delete;
         testObj->closeFunc = prv_test_close;
-        testObj->copyFunc = prv_test_copy;
         testObj->printFunc = prv_test_print;
     }
 

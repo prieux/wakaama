@@ -503,26 +503,11 @@ static uint8_t prv_device_execute(uint16_t instanceId,
     }
 }
 
-static lwm2m_object_t * prv_device_copy(lwm2m_object_t * objectP)
-{
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy)
-    {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->userData = lwm2m_malloc(sizeof(device_data_t));
-        if (NULL == objectCopy->userData) {
-            lwm2m_free(objectCopy);
-            return NULL;
-        }
-        if (NULL != objectP->userData) {
-            memcpy(objectCopy->userData, objectP->userData, sizeof(device_data_t));
-        }
-    }
-    return objectCopy;
-}
-
 static void prv_device_close(lwm2m_object_t * objectP) {
-    lwm2m_free(objectP->userData);
+    if (NULL != objectP->userData) {
+        lwm2m_free(objectP->userData);
+        objectP->userData = NULL;
+    }
 }
 
 static void prv_device_print(lwm2m_object_t * objectP)
@@ -565,7 +550,6 @@ lwm2m_object_t * get_object_device()
         deviceObj->readFunc = prv_device_read;
         deviceObj->writeFunc = prv_device_write;
         deviceObj->executeFunc = prv_device_execute;
-        deviceObj->copyFunc = prv_device_copy;
         deviceObj->closeFunc = prv_device_close;
         deviceObj->printFunc = prv_device_print;
         deviceObj->userData = lwm2m_malloc(sizeof(device_data_t));
