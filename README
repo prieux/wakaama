@@ -80,4 +80,4 @@ The lwm2mclient opens udp port 56830 and tries to register to a LWM2M Server at
 list of supported commands.
 
 To launch a bootstrap session:
-./lwm2mclient <local port> <bootstrap server IP> <bootstrap server port> true
+./lwm2mclient <local port> <bootstrap server IP> <bootstrap server port> bootstrap
