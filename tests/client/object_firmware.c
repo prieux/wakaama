@@ -223,26 +223,11 @@ static uint8_t prv_firmware_execute(uint16_t instanceId,
     }
 }
 
-static lwm2m_object_t * prv_firmware_copy(lwm2m_object_t * objectP)
-{
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy)
-    {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->userData = lwm2m_malloc(sizeof(firmware_data_t));
-        if (NULL == objectCopy->userData) {
-            lwm2m_free(objectCopy);
-            return NULL;
-        }
-        if (NULL != objectP->userData) {
-            memcpy(objectCopy->userData, objectP->userData, sizeof(firmware_data_t));
-        }
-    }
-    return objectCopy;
-}
-
 static void prv_firmware_close(lwm2m_object_t * objectP) {
-    lwm2m_free(objectP->userData);
+    if (NULL != objectP->userData) {
+        lwm2m_free(objectP->userData);
+        objectP->userData = NULL;
+    }
 }
 
 static void prv_firmware_print(lwm2m_object_t * objectP)
@@ -286,7 +271,6 @@ lwm2m_object_t * get_object_firmware()
         firmwareObj->writeFunc = prv_firmware_write;
         firmwareObj->executeFunc = prv_firmware_execute;
         firmwareObj->closeFunc = prv_firmware_close;
-        firmwareObj->copyFunc = prv_firmware_copy;
         firmwareObj->printFunc = prv_firmware_print;
         firmwareObj->userData = malloc(sizeof(firmware_data_t));
 

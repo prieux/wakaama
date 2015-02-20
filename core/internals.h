@@ -139,7 +139,9 @@ void handle_observe_notify(lwm2m_context_t * contextP, void * fromSessionH, coap
 void observation_remove(lwm2m_client_t * clientP, lwm2m_observation_t * observationP);
 
 // defined in bootstrap.c
-void handle_bootstrap(lwm2m_context_t * contextP, coap_packet_t * message, void * fromSessionH);
+void handle_bootstrap_ack(lwm2m_context_t * context, coap_packet_t * message, void * fromSessionH);
+void bootstrap_failed(lwm2m_context_t * context);
+void reset_bootstrap_timer(lwm2m_context_t * context);
 
 // defined in utils.c
 lwm2m_binding_t lwm2m_stringToBinding(uint8_t *buffer, size_t length);

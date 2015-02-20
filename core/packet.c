@@ -106,7 +106,7 @@ static void handle_ack(lwm2m_context_t * contextP,
 {
 #ifdef LWM2M_CLIENT_MODE
     if (contextP->bsState == BOOTSTRAP_INITIATED) {
-        handle_bootstrap(contextP, message, fromSessionH);
+        handle_bootstrap_ack(contextP, message, fromSessionH);
     }
 #endif
 }
@@ -123,25 +123,19 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
     if (uriP == NULL) {
         return BAD_REQUEST_4_00;
     }
-    
-    LOG("    Uri flag: %u, objectId: %u, instanceId:%u, resourceId:%u\r\n", uriP->flag, uriP->objectId, uriP->instanceId, uriP->resourceId);
-
     switch(uriP->flag & LWM2M_URI_MASK_TYPE)
     {
 #ifdef LWM2M_CLIENT_MODE
     case LWM2M_URI_FLAG_DM:
         // TODO: Authentify server
-        LOG("    Flag DM\r\n");
         result = handle_dm_request(contextP, uriP, fromSessionH, message, response);
         break;
 
     case LWM2M_URI_FLAG_DELETE_ALL:
-        LOG("    Flag delete all instances\r\n");
         result = handle_delete_all(contextP, fromSessionH, message, response);
         break;
 
     case LWM2M_URI_FLAG_BOOTSTRAP:
-        LOG("    Flag Bootstrap\r\n");
         result = NOT_IMPLEMENTED_5_01;
         break;
 #endif
@@ -161,7 +155,7 @@ static coap_status_t handle_request(lwm2m_context_t * contextP,
         break;
     }
 
-    LOG("    Result: %d.%.2d\r\n", result >> 5, result & 0x1F);
+    LOG("    Request result: %d.%.2d\r\n", result >> 5, result & 0x1F);
     coap_set_status_code(response, result);
 
     if (result < BAD_REQUEST_4_00)
@@ -305,12 +299,7 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
             /* Responses */
             lwm2m_transaction_t * transaction;
 
-            if (message->type==COAP_TYPE_ACK)
-            {
-                LOG("Received ACK\n");
-                handle_ack(contextP, fromSessionH, message);
-            }
-            else if (message->type==COAP_TYPE_RST)
+            if (message->type == COAP_TYPE_RST)
             {
                 LOG("Received RST\n");
                 /* Cancel possible subscriptions. */
@@ -327,6 +316,11 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
 #endif
             {
                 transaction_handle_response(contextP, fromSessionH, message);
+            }
+
+            if (message->type == COAP_TYPE_ACK) {
+                LOG("Received ACK\n");
+                handle_ack(contextP, fromSessionH, message);
             }
         } /* Request or Response */
 

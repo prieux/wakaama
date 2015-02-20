@@ -59,8 +59,7 @@
 #include <string.h>
 #include <stdio.h>
 
-//#ifdef LWM2M_CLIENT_MODE
-
+#ifdef LWM2M_CLIENT_MODE
 #define PRV_QUERY_BUFFER_LENGTH 200
 
 static int prv_getBootstrapQuery(lwm2m_context_t * contextP,
@@ -70,8 +69,9 @@ static int prv_getBootstrapQuery(lwm2m_context_t * contextP,
     int index = 0;
 
     index = snprintf(buffer, length, "?ep=%s", contextP->endpointName);
-    if (index <= 1) return 0;
-
+    if (index <= 1) {
+        return 0;
+    }
     return index;
 }
 
@@ -80,42 +80,31 @@ static void prv_handleBootstrapReply(lwm2m_transaction_t * transacP, void * mess
     char code_as_string[5];
     lwm2m_server_t * targetP;
     
-    LOG("    Handling bootstrap reply...\r\n");
+    LOG("[BOOTSTRAP] Handling bootstrap reply...\r\n");
     targetP = (lwm2m_server_t *)(transacP->peerP);
-    LOG("    Server status: %d\r\n", targetP->status);
     coap_packet_t * packet = (coap_packet_t *)message;
-    if (packet != NULL)
-    {
-        LOG("    Returned code: %u.%.2u\r\n", packet->code >> 5, packet->code & 0x1F);
-    }
-    else
-    {
-        LOG("    Bootstrap returned packet is null!\r\n");
-    }
 }
 
 // start a device initiated bootstrap
 int lwm2m_bootstrap(lwm2m_context_t * contextP) {
     char query[PRV_QUERY_BUFFER_LENGTH];
     int query_length = 0;
-
     lwm2m_transaction_t * transaction = NULL;
 
     query_length = prv_getBootstrapQuery(contextP, query, sizeof(query));
     if (query_length == 0) return INTERNAL_SERVER_ERROR_5_00;
 
+    // refresh server list
+    object_getServers(contextP);
+
     // find the first bootstrap server
     lwm2m_server_t * bootstrapServer = contextP->bootstrapServerList;
-    if (bootstrapServer != NULL)
-    {
-        LOG("\r\nBootstrap server found\r\n");
-        if (bootstrapServer->sessionH == NULL)
-        {
+    if (bootstrapServer != NULL) {
+        if (bootstrapServer->sessionH == NULL) {
             bootstrapServer->sessionH = contextP->connectCallback(bootstrapServer->shortID, contextP->userData);
         }
-        if (bootstrapServer->sessionH != NULL)
-        {
-            LOG("bootstrap session starting...\r\n");
+        if (bootstrapServer->sessionH != NULL) {
+            LOG("[BOOTSTRAP] Bootstrap session starting...\r\n");
             transaction = transaction_new(COAP_POST, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)bootstrapServer);
             if (transaction == NULL) return INTERNAL_SERVER_ERROR_5_00;
 
@@ -126,47 +115,73 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
             transaction->userData = (void *)bootstrapServer;
 
             contextP->transactionList = (lwm2m_transaction_t *)LWM2M_LIST_ADD(contextP->transactionList, transaction);
-            if (transaction_send(contextP, transaction) == 0)
-            {
+            if (transaction_send(contextP, transaction) == 0) {
                 bootstrapServer->mid = transaction->mID;
-                LOG("DI bootstrap requested to BS server\r\n");
+                LOG("[BOOTSTRAP] DI bootstrap requested to BS server\r\n");
                 /*
-                 * TODO: starting here, we'll need to archive the object configuration in case of network or
+                 * Starting here, we'll need to archive the object configuration in case of network or
                  * botstrap server failure
                  */
                 lwm2m_backup_objects(contextP);
-                close_server_list(contextP);
+                //delete_server_list(contextP);
             }
         }
-        else
-        {
+        else {
             LOG("No bootstrap session handler found\r\n");
         }
     }
     return 0;
 }
 
-void handle_bootstrap(lwm2m_context_t * contextP,
-                      coap_packet_t * message,
-                      void * fromSessionH)
+void handle_bootstrap_ack(lwm2m_context_t * context,
+        coap_packet_t * message,
+        void * fromSessionH)
 {
     if (COAP_204_CHANGED == message->code) {
-        struct timeval tv;
-
-        contextP->bsState = BOOTSTRAP_PENDING;
-        LOG("    Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
-
-        // TODO extract method?
-        lwm2m_gettimeofday(&tv, NULL);
-        // reset bootstrap timeout timer
-        contextP->bsStart.tv_sec = tv.tv_sec;
+        context->bsState = BOOTSTRAP_PENDING;
+        LOG("[BOOTSTRAP] Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
+        reset_bootstrap_timer(context);
+        // object list has been backuped, let's delete server and bootstrap server lists
+        //delete_server_list(context);
+        lwm2m_deregister(context);
+        delete_bootstrap_server_list(context);
     }
-    else
-    {
-        contextP->bsState = BOOTSTRAP_FAILED;
-        LOG("    Bootstrap failed\r\n");
-        lwm2m_restore_objects(contextP);
+    else {
+        bootstrap_failed(context);
     }
 }
 
-//#endif
+void bootstrap_failed(lwm2m_context_t * context) {
+    context->bsState = BOOTSTRAP_FAILED;
+    LOG("[BOOTSTRAP] Bootstrap failed\r\n");
+    lwm2m_restore_objects(context);
+}
+
+void reset_bootstrap_timer(lwm2m_context_t * context) {
+    struct timeval currentTime;
+
+    lwm2m_gettimeofday(&currentTime, NULL);
+    context->bsStart.tv_sec = currentTime.tv_sec;
+}
+
+void lwm2m_update_bootstrap_state(lwm2m_context_t * context,
+        uint32_t currentTime,
+        struct timeval * timeout) {
+    if (context->bsState == BOOTSTRAP_REQUESTED) {
+        context->bsState = BOOTSTRAP_INITIATED;
+        context->bsStart.tv_sec = currentTime;
+        LOG("[BOOTSTRAP] Bootstrap started at: %u\r\n", context->bsStart.tv_sec);
+        lwm2m_bootstrap(context);
+    }
+    else if (context->bsState == BOOTSTRAP_PENDING) {
+        if ((currentTime - context->bsStart.tv_sec) > timeout->tv_sec) {
+            // Time out and no error => bootstrap ok
+            LOG("\r\n[BOOTSTRAP] Bootstrapped at: %u (difftime: %u s)\r\n", currentTime, currentTime - context->bsStart.tv_sec);
+            context->bsState = BOOTSTRAPPED;
+        }
+        else {
+
+        }
+    }
+}
+#endif

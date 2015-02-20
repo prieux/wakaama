@@ -83,11 +83,13 @@ extern lwm2m_object_t * get_test_object();
 extern lwm2m_object_t * get_server_object();
 extern lwm2m_object_t * get_security_object();
 
+// from object_security.c
 extern char * get_server_uri(lwm2m_object_t * objectP, uint16_t serverID);
 
 typedef struct
 {
     lwm2m_object_t * securityObjP;
+    lwm2m_object_t * serverObject;
     int sock;
     connection_t * connList;
 } client_data_t;
@@ -123,15 +125,19 @@ static void * prv_connect_server(uint16_t serverID,
     dataP = (client_data_t *)userData;
 
     uri = get_server_uri(dataP->securityObjP, serverID);
+
     if (uri == NULL) return NULL;
 
     // parse uri in the form "coaps://[host]:[port]"
-    if (0==strncmp(uri, "coaps://", strlen("coaps://")))
-      host = uri+strlen("coaps://");
-    else 
-    if (0==strncmp(uri, "coap://",  strlen("coap://")))
-      host = uri+strlen("coap://");
-    else goto exit;
+    if (0==strncmp(uri, "coaps://", strlen("coaps://"))) {
+        host = uri+strlen("coaps://");
+    }
+    else if (0==strncmp(uri, "coap://",  strlen("coap://"))) {
+        host = uri+strlen("coap://");
+    }
+    else {
+        goto exit;
+    }
     
     portStr = strchr(host, ':');
     if (portStr == NULL) goto exit;
@@ -139,16 +145,16 @@ static void * prv_connect_server(uint16_t serverID,
     *portStr = 0;
     portStr++;
     port = strtol(portStr, &ptr, 10);
-    if (*ptr != 0) goto exit;
+    if (*ptr != 0) {
+        goto exit;
+    }
 
     fprintf(stdout, "Trying to connect to LWM2M Server at %s:%d\r\n", host, port);
     newConnP = connection_create(dataP->connList, dataP->sock, host, port);
-    if (newConnP == NULL)
-    {
+    if (newConnP == NULL) {
         fprintf(stderr, "Connection creation failed.\r\n");
     }
-    else
-    {
+    else {
         dataP->connList = newConnP;
     }
 
@@ -316,7 +322,9 @@ static void prv_initiate_bootstrap(char * buffer,
                                    void * user_data)
 {
     lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
-    lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+    if ((lwm2mH->bsState != BOOTSTRAP_INITIATED) && (lwm2mH->bsState != BOOTSTRAP_PENDING)) {
+        lwm2mH->bsState = BOOTSTRAP_REQUESTED;
+    }
 }
 
 static void prv_display_objects(char * buffer,
@@ -327,7 +335,7 @@ static void prv_display_objects(char * buffer,
     if (NULL != lwm2mH->objectList) {
         for (i = 0; i < lwm2mH->numObject; i++) {
             lwm2m_object_t * object = lwm2mH->objectList[i];
-            if (NULL != object->printFunc) {
+            if ((NULL != object) && (NULL != object->printFunc)) {
                 object->printFunc(object);
             }
         }
@@ -342,11 +350,34 @@ static void prv_display_backup(char * buffer,
     if (NULL != lwm2mH->objectListBackup) {
         for (i = 0; i < lwm2mH->numObjectBackup; i++) {
             lwm2m_object_t * object = lwm2mH->objectListBackup[i];
-            if (NULL != object->printFunc) {
+            if ((NULL != object) && (NULL != object->printFunc)) {
                 object->printFunc(object);
             }
         }
     }
+}
+
+static void prv_update_client_data(lwm2m_context_t * context) {
+    lwm2m_object_t * securityObject = NULL;
+    lwm2m_object_t * serverObject = NULL;
+    int i;
+
+    for (i = 0 ; i < context->numObject ; i++) {
+        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SECURITY_OBJECT_ID)) {
+            securityObject = context->objectList[i];
+            break;
+        }
+    }
+    ((client_data_t *)context->userData)->securityObjP = securityObject;
+
+    // find id of first server instance
+    for (i = 0 ; i < context->numObject ; i++) {
+        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SERVER_OBJECT_ID)) {
+            serverObject = context->objectList[i];
+            break;
+        }
+    }
+    ((client_data_t *)context->userData)->serverObject = serverObject;
 }
 
 #define OBJ_COUNT 6
@@ -389,7 +420,7 @@ int main(int argc, char *argv[])
     strcpy(localPort, "56830");
     strcpy(server,"localhost");
     strcpy(serverPort, LWM2M_STANDARD_PORT_STR);	//see connection.h
-    strcpy(bootstrapRequested, "false");
+    strcpy(bootstrapRequested, "no");
 
     if (argc >= 2) strcpy (localPort, argv[1]);
     if (argc >= 3) strcpy (server, argv[2]);
@@ -414,7 +445,7 @@ int main(int argc, char *argv[])
     char serverUri[50];
     int serverId = 123;
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
-    objArray[0] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "true") == 0 ? true : false);
+    objArray[0] = get_security_object(serverId, serverUri, strcmp(bootstrapRequested, "bootstrap") == 0 ? true : false);
     if (NULL == objArray[0])
     {
         fprintf(stderr, "Failed to create security object\r\n");
@@ -471,12 +502,12 @@ int main(int argc, char *argv[])
     /*
      * Bootstrap state initialization
      */
-    if (strcmp(bootstrapRequested, "true") == 0)
+    if (strcmp(bootstrapRequested, "bootstrap") == 0)
     {
         lwm2mH->bsState = BOOTSTRAP_REQUESTED;
     }
     else {
-        lwm2mH->bsState = NOT_BOOTSTRAPED;
+        lwm2mH->bsState = NOT_BOOTSTRAPPED;
     }
 
     /*
@@ -517,15 +548,15 @@ int main(int argc, char *argv[])
      */
     while (0 == g_quit)
     {
-        struct timeval tv;
+        struct timeval timeout;
         fd_set readfds;
 
         FD_ZERO(&readfds);
         FD_SET(data.sock, &readfds);
         FD_SET(STDIN_FILENO, &readfds);
 
-        tv.tv_sec = 60;
-        tv.tv_usec = 0;
+        timeout.tv_sec = 20;
+        timeout.tv_usec = 0;
 
         /*
          * This function does two things:
@@ -533,18 +564,28 @@ int main(int argc, char *argv[])
          *  - Secondly it adjust the timeout value (default 60s) depending on the state of the transaction
          *    (eg. retransmission) and the time between the next operation
          */
-        result = lwm2m_step(lwm2mH, &tv);
+        result = lwm2m_step(lwm2mH, &timeout);
         if (result != 0)
         {
             fprintf(stderr, "lwm2m_step() failed: 0x%X\r\n", result);
             return -1;
+        }
+        if (lwm2mH->bsState == BOOTSTRAPPED) {
+            lwm2mH->bsState = NOT_BOOTSTRAPPED;
+            /*
+             * HACK: security object might have changed due to bootstrap,
+             * so clientData (aka userData) might not be up-to-date
+             */
+            delete_server_list(lwm2mH);
+            prv_update_client_data(lwm2mH);
+            lwm2m_update_registrations(lwm2mH, 0, &timeout, true);
         }
 
         /*
          * This part will set up an interruption until an event happen on SDTIN or the socket until "tv" timed out (set
          * with the precedent function)
          */
-        result = select(FD_SETSIZE, &readfds, NULL, NULL, &tv);
+        result = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
 
         if ( result < 0 )
         {

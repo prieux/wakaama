@@ -171,26 +171,11 @@ static uint8_t prv_location_read(uint16_t objInstId,
     return result;
 }
 
-static lwm2m_object_t * prv_location_copy(lwm2m_object_t * objectP)
-{
-    lwm2m_object_t * objectCopy = (lwm2m_object_t *)lwm2m_malloc(sizeof(lwm2m_object_t));
-    if (NULL != objectCopy)
-    {
-        memcpy(objectCopy, objectP, sizeof(lwm2m_object_t));
-        objectCopy->userData = lwm2m_malloc(sizeof(location_data_t));
-        if (NULL == objectCopy->userData) {
-            lwm2m_free(objectCopy);
-            return NULL;
-        }
-        if (NULL != objectP->userData) {
-            memcpy(objectCopy->userData, objectP->userData, sizeof(location_data_t));
-        }
-    }
-    return objectCopy;
-}
-
 static void prv_location_close(lwm2m_object_t * objectP) {
-    lwm2m_free(objectP->userData);
+    if (NULL != objectP->userData) {
+        lwm2m_free(objectP->userData);
+        objectP->userData = NULL;
+    }
 }
 
 static void prv_location_print(lwm2m_object_t * objectP)
@@ -283,7 +268,7 @@ lwm2m_object_t * get_object_location() {
     //locationObj->createFunc  = prv_location_create;
     //locationObj->deleteFunc  = prv_location_delete;
     locationObj->closeFunc   = prv_location_close;
-    locationObj->copyFunc    = prv_location_copy;
+    //locationObj->copyFunc    = prv_location_copy;
     locationObj->printFunc   = prv_location_print;
     locationObj->userData    = lwm2m_malloc(sizeof(location_data_t));
 

@@ -147,6 +147,9 @@ static void prv_handleRegistrationReply(lwm2m_transaction_t * transacP,
             if (packet->code == CREATED_2_01)
             {
                 targetP->status = STATE_REGISTERED;
+                if (NULL != targetP->location) {
+                    lwm2m_free(targetP->location);
+                }
                 targetP->location = coap_get_multi_option_as_string(packet->location_path);
 
                 if (0 == lwm2m_gettimeofday(&tv, NULL)) 
@@ -279,8 +282,6 @@ static int prv_update_registration(lwm2m_context_t * contextP, lwm2m_server_t * 
     transaction = transaction_new(COAP_PUT, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)server);
     if (transaction == NULL) return INTERNAL_SERVER_ERROR_5_00;
 
-    LOG("server location: %s\r\n", server->location);
-
     coap_set_header_uri_path(transaction->message, server->location);
 
     transaction->callback = prv_handleRegistrationUpdateReply;
@@ -302,17 +303,14 @@ int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID
     lwm2m_server_t * targetP;
 
     targetP = contextP->serverList;
-    LOG("Initial targetP: %x\r\n", targetP);
     if (targetP == NULL) {
         if (object_getServers(contextP) == -1) {
             return NOT_FOUND_4_04;
         }
     }
     targetP = contextP->serverList;
-    LOG("Second initial targetP: %x\r\n", targetP);
     while (targetP != NULL)
     {
-        LOG("targetP: %x\r\n", targetP);
         if (targetP->shortID == shortServerID)
         {
             // found the server, trigger the update transaction
@@ -328,34 +326,34 @@ int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID
 }
 
 // for each server update the registration if needed
-int lwm2m_update_registrations(lwm2m_context_t * contextP, uint32_t currentTime, struct timeval * timeoutP)
+int lwm2m_update_registrations(lwm2m_context_t * contextP,
+        uint32_t currentTime,
+        struct timeval * timeoutP,
+        bool refreshServerList)
 {
     lwm2m_server_t * targetP;
-    bool needBootstrap = true;
 
+    if (refreshServerList) {
+        object_getServers(contextP);
+    }
     targetP = contextP->serverList;
     while (targetP != NULL)
     {
         switch (targetP->status)
         {
             case STATE_REGISTERED:
-                needBootstrap = false;
                 if (targetP->registration + targetP->lifetime - timeoutP->tv_sec <= currentTime)
                 {
-                    LOG("About to update registrations...\r\n");
                     prv_update_registration(contextP, targetP);
                 }
                 break;
             case STATE_DEREGISTERED:
                 // TODO: is it disabled?
-                LOG("About to register...\r\n");
                 prv_register(contextP, targetP);
                 break;
             case STATE_REG_PENDING:
-                needBootstrap = false;
                 break;
             case STATE_REG_UPDATE_PENDING:
-                needBootstrap = false;
                 // TODO: check for timeout and retry?
                 break;
             case STATE_DEREG_PENDING:
