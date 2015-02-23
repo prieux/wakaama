@@ -11,14 +11,6 @@
  *    http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
- *    David Navarro, Intel Corporation - initial API and implementation
- *    domedambrosio - Please refer to git log
- *    Fabien Fleutot - Please refer to git log
- *    Simon Bernard - Please refer to git log
- *    Toby Jaffey - Please refer to git log
- *    Manuel Sangoi - Please refer to git log
- *    Julien Vermillard - Please refer to git log
- *    Bosch Software Innovations GmbH - Please refer to git log
  *    Pascal Rieux - Please refer to git log
  *
  *******************************************************************************/
@@ -117,6 +109,7 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
                 LOG("[BOOTSTRAP] DI bootstrap requested to BS server\r\n");
                 // Backup the object configuration in case of network or bootstrap server failure
                 lwm2m_backup_objects(contextP);
+                lwm2m_deregister(contextP);
             }
         }
         else {
@@ -134,7 +127,6 @@ void handle_bootstrap_ack(lwm2m_context_t * context,
         context->bsState = BOOTSTRAP_PENDING;
         LOG("[BOOTSTRAP] Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
         reset_bootstrap_timer(context);
-        lwm2m_deregister(context);
         delete_bootstrap_server_list(context);
     }
     else {
