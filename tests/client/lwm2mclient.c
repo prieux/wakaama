@@ -572,13 +572,9 @@ int main(int argc, char *argv[])
         }
         if (lwm2mH->bsState == BOOTSTRAPPED) {
             lwm2mH->bsState = NOT_BOOTSTRAPPED;
-            /*
-             * HACK: security object might have changed due to bootstrap,
-             * so clientData (aka userData) might not be up-to-date
-             */
-            delete_server_list(lwm2mH);
             prv_update_client_data(lwm2mH);
-            lwm2m_update_registrations(lwm2mH, 0, &timeout, true);
+            object_getServers(lwm2mH);
+            lwm2m_update_registrations(lwm2mH, 0, &timeout);
         }
 
         /*

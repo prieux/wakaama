@@ -329,8 +329,6 @@ coap_status_t object_delete(lwm2m_context_t * contextP,
 coap_status_t object_delete_all(lwm2m_context_t * contextP)
 {
     LOG("    Request is DEL /\r\n");
-    delete_server_list(contextP);
-    delete_bootstrap_server_list(contextP);
     delete_observed_list(contextP);
     lwm2m_delete_object_list_content(contextP, false, true);
 

@@ -235,7 +235,7 @@ int lwm2m_start(lwm2m_context_t * contextP)
 }
 
 static void prv_handleRegistrationUpdateReply(lwm2m_transaction_t * transacP,
-                                        void * message)
+        void * message)
 {
     lwm2m_server_t * targetP;
     coap_packet_t * packet = (coap_packet_t *)message;
@@ -328,15 +328,9 @@ int lwm2m_update_registration(lwm2m_context_t * contextP, uint16_t shortServerID
 // for each server update the registration if needed
 int lwm2m_update_registrations(lwm2m_context_t * contextP,
         uint32_t currentTime,
-        struct timeval * timeoutP,
-        bool refreshServerList)
+        struct timeval * timeoutP)
 {
-    lwm2m_server_t * targetP;
-
-    if (refreshServerList) {
-        object_getServers(contextP);
-    }
-    targetP = contextP->serverList;
+    lwm2m_server_t * targetP = contextP->serverList;
     while (targetP != NULL)
     {
         switch (targetP->status)
