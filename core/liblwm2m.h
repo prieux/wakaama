@@ -16,6 +16,7 @@
  *    Simon Bernard - Please refer to git log
  *    Toby Jaffey - Please refer to git log
  *    Julien Vermillard - Please refer to git log
+ *    Pascal Rieux - Please refer to git log
  *******************************************************************************/
 
 /*

@@ -14,6 +14,7 @@
  *    Julien Vermillard - initial implementation
  *    Fabien Fleutot - Please refer to git log
  *    David Navarro, Intel Corporation - Please refer to git log
+ *    Pascal Rieux - Please refer to git log
  *    
  *******************************************************************************/
 

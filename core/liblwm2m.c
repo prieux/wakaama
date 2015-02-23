@@ -15,6 +15,7 @@
  *    Fabien Fleutot - Please refer to git log
  *    Simon Bernard - Please refer to git log
  *    Toby Jaffey - Please refer to git log
+ *    Pascal Rieux - Please refer to git log
  *    
  *******************************************************************************/
 
@@ -344,6 +345,8 @@ void lwm2m_restore_objects(lwm2m_context_t * context)
             context->objectList[i]->copyFunc(context->objectList[i], context->objectListBackup[i]);
         }
     }
+
+    object_getServers(context);
     LOG("[BOOTSTRAP] ObjectList restored\r\n");
 }
 #endif
@@ -395,7 +398,7 @@ int lwm2m_step(lwm2m_context_t * contextP,
     }
 #ifdef LWM2M_CLIENT_MODE
     if (contextP->bsState != BOOTSTRAP_PENDING) {
-        lwm2m_update_registrations(contextP, currentTime.tv_sec, timeoutP, false);
+        lwm2m_update_registrations(contextP, currentTime.tv_sec, timeoutP);
     }
     lwm2m_update_bootstrap_state(contextP, currentTime.tv_sec, timeoutP);
     LOG(".");
