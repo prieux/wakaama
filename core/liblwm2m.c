@@ -114,9 +114,10 @@ void lwm2m_delete_object_list_content(lwm2m_context_t * context,
 }
 
 void lwm2m_deregister(lwm2m_context_t * context) {
-    while (NULL != context->serverList){
-        registration_deregister(context, context->serverList);
-        context->serverList = context->serverList->next;
+    lwm2m_server_t * server = context->serverList;
+    while (NULL != server){
+        registration_deregister(context, server);
+        server = server->next;
     }
 }
 
@@ -131,6 +132,8 @@ void delete_server_list(lwm2m_context_t * context) {
         }
         lwm2m_free(server);
     }
+    lwm2m_free(context->serverList);
+    context->serverList = NULL;
 }
 
 void delete_bootstrap_server_list(lwm2m_context_t * contextP) {

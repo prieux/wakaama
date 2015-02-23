@@ -94,9 +94,6 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
     query_length = prv_getBootstrapQuery(contextP, query, sizeof(query));
     if (query_length == 0) return INTERNAL_SERVER_ERROR_5_00;
 
-    // refresh server list
-    object_getServers(contextP);
-
     // find the first bootstrap server
     lwm2m_server_t * bootstrapServer = contextP->bootstrapServerList;
     if (bootstrapServer != NULL) {
@@ -118,12 +115,8 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
             if (transaction_send(contextP, transaction) == 0) {
                 bootstrapServer->mid = transaction->mID;
                 LOG("[BOOTSTRAP] DI bootstrap requested to BS server\r\n");
-                /*
-                 * Starting here, we'll need to archive the object configuration in case of network or
-                 * botstrap server failure
-                 */
+                // Backup the object configuration in case of network or bootstrap server failure
                 lwm2m_backup_objects(contextP);
-                //delete_server_list(contextP);
             }
         }
         else {
@@ -141,8 +134,6 @@ void handle_bootstrap_ack(lwm2m_context_t * context,
         context->bsState = BOOTSTRAP_PENDING;
         LOG("[BOOTSTRAP] Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
         reset_bootstrap_timer(context);
-        // object list has been backuped, let's delete server and bootstrap server lists
-        //delete_server_list(context);
         lwm2m_deregister(context);
         delete_bootstrap_server_list(context);
     }
