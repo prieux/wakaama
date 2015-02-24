@@ -67,14 +67,19 @@ static int prv_getBootstrapQuery(lwm2m_context_t * contextP,
     return index;
 }
 
-static void prv_handleBootstrapReply(lwm2m_transaction_t * transacP, void * message)
+static void prv_handleBootstrapReply(lwm2m_transaction_t * transaction, void * message)
 {
-    char code_as_string[5];
     lwm2m_server_t * targetP;
     
     LOG("[BOOTSTRAP] Handling bootstrap reply...\r\n");
-    targetP = (lwm2m_server_t *)(transacP->peerP);
-    coap_packet_t * packet = (coap_packet_t *)message;
+    lwm2m_context_t * context = (lwm2m_context_t *)transaction->userData;
+    coap_packet_t * coapMessage = (coap_packet_t *)message;
+    if ((NULL != coapMessage) && (coapMessage->type == COAP_TYPE_ACK)) {
+        handle_bootstrap_ack(context, coapMessage, NULL);
+    }
+    else {
+        bootstrap_failed(context);
+    }
 }
 
 // start a device initiated bootstrap
@@ -95,13 +100,16 @@ int lwm2m_bootstrap(lwm2m_context_t * contextP) {
         if (bootstrapServer->sessionH != NULL) {
             LOG("[BOOTSTRAP] Bootstrap session starting...\r\n");
             transaction = transaction_new(COAP_POST, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)bootstrapServer);
-            if (transaction == NULL) return INTERNAL_SERVER_ERROR_5_00;
+            if (transaction == NULL) {
+                return INTERNAL_SERVER_ERROR_5_00;
+            }
 
             coap_set_header_uri_path(transaction->message, "/"URI_BOOTSTRAP_SEGMENT);
             coap_set_header_uri_query(transaction->message, query);
 
             transaction->callback = prv_handleBootstrapReply;
-            transaction->userData = (void *)bootstrapServer;
+//            transaction->userData = (void *)bootstrapServer;
+            transaction->userData = (void *)contextP;
 
             contextP->transactionList = (lwm2m_transaction_t *)LWM2M_LIST_ADD(contextP->transactionList, transaction);
             if (transaction_send(contextP, transaction) == 0) {

@@ -483,7 +483,7 @@ static void prv_device_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     device_data_t * data = (device_data_t *)objectP->userData;
-    LOG("  /%u: Device object: %x\r\n", objectP->objID, data);
+    LOG("  /%u: Device object:\r\n", objectP->objID);
     if (NULL != data)
     {
         LOG("    time: %d, time_offset: %s\r\n",

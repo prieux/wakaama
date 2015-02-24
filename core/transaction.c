@@ -273,7 +273,6 @@ int transaction_send(lwm2m_context_t * contextP,
     case ENDPOINT_CLIENT:
         contextP->bufferSendCallback(((lwm2m_client_t*)transacP->peerP)->sessionH,
                                      transacP->buffer, transacP->buffer_len, contextP->userData);
-
         break;
 
     case ENDPOINT_SERVER:

@@ -401,7 +401,7 @@ int lwm2m_step(lwm2m_context_t * contextP,
         lwm2m_update_registrations(contextP, currentTime.tv_sec, timeoutP);
     }
     lwm2m_update_bootstrap_state(contextP, currentTime.tv_sec, timeoutP);
-    LOG(".");
+//    LOG(".");
 #endif
 
 #ifdef LWM2M_SERVER_MODE

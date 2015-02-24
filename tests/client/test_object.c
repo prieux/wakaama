@@ -273,12 +273,12 @@ static void prv_test_close(lwm2m_object_t * object)
 static void prv_test_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("  /%u: Test object: %x, instanceList: %x\r\n", objectP->objID, objectP, objectP->instanceList);
+    LOG("  /%u: Test object, instances:\r\n", objectP->objID);
     prv_instance_t * instance = (prv_instance_t *)objectP->instanceList;
     while (instance != NULL) {
-        LOG("    /%u/%u: instance: %x, shortId: %u, test: %u\r\n",
+        LOG("    /%u/%u: shortId: %u, test: %u\r\n",
                 objectP->objID, instance->shortID,
-                instance, instance->shortID, instance->test);
+                instance->shortID, instance->test);
         instance = (prv_instance_t *)instance->next;
     }
 #endif
