@@ -371,12 +371,12 @@ static void prv_server_copy(lwm2m_object_t * objectDest, lwm2m_object_t * object
 static void prv_server_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("  /%u: Server object: %x, instanceList: %x\r\n", objectP->objID, objectP, objectP->instanceList);
+    LOG("  /%u: Server object, instances:\r\n", objectP->objID);
     server_instance_t * serverInstance = (server_instance_t *)objectP->instanceList;
     while (serverInstance != NULL) {
-        LOG("    /%u/%u: instance: %x, instanceId: %u, shortServerId: %u, lifetime: %u, storing: %s, binding: %s\r\n",
+        LOG("    /%u/%u: instanceId: %u, shortServerId: %u, lifetime: %u, storing: %s, binding: %s\r\n",
                 objectP->objID, serverInstance->instanceId,
-                serverInstance, serverInstance->instanceId, serverInstance->shortServerId, serverInstance->lifetime,
+                serverInstance->instanceId, serverInstance->shortServerId, serverInstance->lifetime,
                 serverInstance->storing ? "true" : "false", serverInstance->binding);
         serverInstance = (server_instance_t *)serverInstance->next;
     }

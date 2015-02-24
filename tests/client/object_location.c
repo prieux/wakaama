@@ -183,10 +183,10 @@ static void prv_location_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     location_data_t * data = (location_data_t *)objectP->userData;
-    LOG("  /%u: Location object: %x\r\n", objectP->objID, data);
+    LOG("  /%u: Location object:\r\n", objectP->objID);
     if (NULL != data)
     {
-        LOG("    lat: %s, lon: %s, alt: %s, uncertainty: %s, timestamp: %u\r\n",
+        LOG("    latitude: %s, longitude: %s, altitude: %s, uncertainty: %s, timestamp: %u\r\n",
                 data->latitude, data->longitude, data->altitude, data->uncertainty, data->timestamp);
     }
 #endif

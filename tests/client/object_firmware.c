@@ -227,7 +227,7 @@ static void prv_firmware_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
     firmware_data_t * data = (firmware_data_t *)objectP->userData;
-    LOG("  /%u: Firmware object: %x\r\n", objectP->objID, data);
+    LOG("  /%u: Firmware object:\r\n", objectP->objID);
     if (NULL != data)
     {
         LOG("    state: %u, supported: %u, result: %u\r\n",

@@ -475,7 +475,8 @@ int main(int argc, char *argv[])
                                                         "   SERVER: short server id such as 123\r\n", prv_update, NULL},
             {"boots", "Initiate a DI bootstrap process", NULL, prv_initiate_bootstrap, NULL},
             {"disp", "Display current objects/instances/resources", NULL, prv_display_objects, NULL},
-            {"dispb", "Display current backup of objects/instances/resources", NULL, prv_display_backup, NULL},
+            {"dispb", "Display current backup of objects/instances/resources\r\n"
+                    "\t(only security and server objects are backupped)", NULL, prv_display_backup, NULL},
             {"quit", "Quit the client gracefully.", NULL, prv_quit, NULL},
             {"^C", "Quit the client abruptly (without sending a de-register message).", NULL, NULL, NULL},
 
@@ -656,7 +657,7 @@ int main(int argc, char *argv[])
         FD_SET(data.sock, &readfds);
         FD_SET(STDIN_FILENO, &readfds);
 
-        timeout.tv_sec = 20;
+        timeout.tv_sec = 5;
         timeout.tv_usec = 0;
 
         /*

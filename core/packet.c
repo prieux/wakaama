@@ -101,17 +101,6 @@ static void handle_reset(lwm2m_context_t * contextP,
 #endif
 }
 
-static void handle_ack(lwm2m_context_t * contextP,
-                         void * fromSessionH,
-                         coap_packet_t * message)
-{
-#ifdef LWM2M_CLIENT_MODE
-    if (contextP->bsState == BOOTSTRAP_INITIATED) {
-        handle_bootstrap_ack(contextP, message, fromSessionH);
-    }
-#endif
-}
-
 static coap_status_t handle_request(lwm2m_context_t * contextP,
                                     void * fromSessionH,
                                     coap_packet_t * message,
@@ -325,8 +314,7 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
             }
 
             if (message->type == COAP_TYPE_ACK) {
-                LOG("Received ACK\n");
-                handle_ack(contextP, fromSessionH, message);
+                LOG("    => Received ACK\n");
             }
         } /* Request or Response */
 

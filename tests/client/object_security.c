@@ -412,12 +412,12 @@ static void prv_security_copy(lwm2m_object_t * objectDest, lwm2m_object_t * obje
 static void prv_security_print(lwm2m_object_t * objectP)
 {
 #ifdef WITH_LOGS
-    LOG("  /%u: Security object: %x, instanceList: %x\r\n", objectP->objID, objectP, objectP->instanceList);
+    LOG("  /%u: Security object, instances:\r\n", objectP->objID);
     security_instance_t * instance = (security_instance_t *)objectP->instanceList;
     while (instance != NULL) {
-        LOG("    /%u/%u: instance: %x, instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
+        LOG("    /%u/%u: instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
                 objectP->objID, instance->instanceId,
-                instance, instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false", instance->shortID);
+                instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false", instance->shortID);
         instance = (security_instance_t *)instance->next;
     }
 #endif
