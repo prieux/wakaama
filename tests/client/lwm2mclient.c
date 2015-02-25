@@ -629,6 +629,7 @@ int main(int argc, char *argv[])
      */
     while (0 == g_quit)
     {
+        struct timeval tv;
         struct timeval timeout;
         fd_set readfds;
 

@@ -319,6 +319,12 @@ static uint8_t prv_read(uint16_t instanceId,
     return result;
 }
 
+static void prv_conn_monitoring_close(lwm2m_object_t * objectP) {
+    if (NULL != objectP->userData) {
+        lwm2m_free(objectP->userData);
+        objectP->userData = NULL;
+    }
+}
 
 lwm2m_object_t * get_object_conn_m()
 {   //------------------------------------------------------------------- JH --
@@ -347,6 +353,7 @@ lwm2m_object_t * get_object_conn_m()
         connObj->readFunc = prv_read;
         connObj->executeFunc = NULL;
         connObj->userData = lwm2m_malloc(sizeof(conn_m_data_t));
+        connObj->closeFunc = prv_conn_monitoring_close;
 
         /*
          * Also some user data can be stored in the object with a private structure containing the needed variables

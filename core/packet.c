@@ -289,12 +289,7 @@ void lwm2m_handle_packet(lwm2m_context_t * contextP,
             /* Responses */
             lwm2m_transaction_t * transaction;
 
-            if (message->type == COAP_TYPE_ACK)
-            {
-                LOG("Received ACK\n");
-                handle_ack(contextP, fromSessionH, message);
-            }
-            else if (message->type == COAP_TYPE_RST)
+            if (message->type == COAP_TYPE_RST)
             {
                 LOG("Received RST\n");
                 /* Cancel possible subscriptions. */
