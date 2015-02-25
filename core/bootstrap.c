@@ -54,21 +54,19 @@
 #ifdef LWM2M_CLIENT_MODE
 #define PRV_QUERY_BUFFER_LENGTH 200
 
-static int prv_getBootstrapQuery(lwm2m_context_t * contextP,
-                                 char * buffer,
-                                 size_t length)
-{
+static int prv_getBootstrapQuery(lwm2m_context_t * context,
+        char * buffer,
+        size_t length) {
     int index = 0;
 
-    index = snprintf(buffer, length, "?ep=%s", contextP->endpointName);
+    index = snprintf(buffer, length, "?ep=%s", context->endpointName);
     if (index <= 1) {
         return 0;
     }
     return index;
 }
 
-static void prv_handleBootstrapReply(lwm2m_transaction_t * transaction, void * message)
-{
+static void prv_handleBootstrapReply(lwm2m_transaction_t * transaction, void * message) {
     lwm2m_server_t * targetP;
     
     LOG("[BOOTSTRAP] Handling bootstrap reply...\r\n");
@@ -83,54 +81,51 @@ static void prv_handleBootstrapReply(lwm2m_transaction_t * transaction, void * m
 }
 
 // start a device initiated bootstrap
-int lwm2m_bootstrap(lwm2m_context_t * contextP) {
+int lwm2m_bootstrap(lwm2m_context_t * context) {
     char query[PRV_QUERY_BUFFER_LENGTH];
     int query_length = 0;
     lwm2m_transaction_t * transaction = NULL;
 
-    query_length = prv_getBootstrapQuery(contextP, query, sizeof(query));
-    if (query_length == 0) return INTERNAL_SERVER_ERROR_5_00;
+    query_length = prv_getBootstrapQuery(context, query, sizeof(query));
+    if (query_length == 0) {
+        return INTERNAL_SERVER_ERROR_5_00;
+    }
 
     // find the first bootstrap server
-    lwm2m_server_t * bootstrapServer = contextP->bootstrapServerList;
+    lwm2m_server_t * bootstrapServer = context->bootstrapServerList;
     if (bootstrapServer != NULL) {
         if (bootstrapServer->sessionH == NULL) {
-            bootstrapServer->sessionH = contextP->connectCallback(bootstrapServer->shortID, contextP->userData);
+            bootstrapServer->sessionH = context->connectCallback(bootstrapServer->shortID, context->userData);
         }
         if (bootstrapServer->sessionH != NULL) {
             LOG("[BOOTSTRAP] Bootstrap session starting...\r\n");
-            transaction = transaction_new(COAP_POST, NULL, contextP->nextMID++, ENDPOINT_SERVER, (void *)bootstrapServer);
+            transaction = transaction_new(COAP_POST, NULL, context->nextMID++, ENDPOINT_SERVER, (void *)bootstrapServer);
             if (transaction == NULL) {
                 return INTERNAL_SERVER_ERROR_5_00;
             }
-
             coap_set_header_uri_path(transaction->message, "/"URI_BOOTSTRAP_SEGMENT);
             coap_set_header_uri_query(transaction->message, query);
-
             transaction->callback = prv_handleBootstrapReply;
-//            transaction->userData = (void *)bootstrapServer;
-            transaction->userData = (void *)contextP;
-
-            contextP->transactionList = (lwm2m_transaction_t *)LWM2M_LIST_ADD(contextP->transactionList, transaction);
-            if (transaction_send(contextP, transaction) == 0) {
+            transaction->userData = (void *)context;
+            context->transactionList = (lwm2m_transaction_t *)LWM2M_LIST_ADD(context->transactionList, transaction);
+            if (transaction_send(context, transaction) == 0) {
                 bootstrapServer->mid = transaction->mID;
                 LOG("[BOOTSTRAP] DI bootstrap requested to BS server\r\n");
                 // Backup the object configuration in case of network or bootstrap server failure
-                lwm2m_backup_objects(contextP);
-                lwm2m_deregister(contextP);
+                lwm2m_backup_objects(context);
+                lwm2m_deregister(context);
             }
         }
         else {
             LOG("No bootstrap session handler found\r\n");
         }
     }
-    return 0;
+    return NO_ERROR;
 }
 
 void handle_bootstrap_ack(lwm2m_context_t * context,
         coap_packet_t * message,
-        void * fromSessionH)
-{
+        void * fromSessionH) {
     if (COAP_204_CHANGED == message->code) {
         context->bsState = BOOTSTRAP_PENDING;
         LOG("[BOOTSTRAP] Received ACK/2.04, Bootstrap pending, waiting for DEL/PUT from BS server...\r\n");
@@ -159,19 +154,34 @@ void lwm2m_update_bootstrap_state(lwm2m_context_t * context,
         uint32_t currentTime,
         struct timeval * timeout) {
     if (context->bsState == BOOTSTRAP_REQUESTED) {
-        context->bsState = BOOTSTRAP_INITIATED;
+        context->bsState = BOOTSTRAP_CLIENT_HOLD_OFF;
         context->bsStart.tv_sec = currentTime;
-        LOG("[BOOTSTRAP] Bootstrap started at: %u\r\n", context->bsStart.tv_sec);
-        lwm2m_bootstrap(context);
+        LOG("[BOOTSTRAP] Bootstrap requested at: %u, now waiting during ClientHoldOffTime...\r\n",
+                context->bsStart.tv_sec);
     }
-    else if (context->bsState == BOOTSTRAP_PENDING) {
-        if ((currentTime - context->bsStart.tv_sec) > timeout->tv_sec) {
-            // Time out and no error => bootstrap ok
-            LOG("\r\n[BOOTSTRAP] Bootstrapped at: %u (difftime: %u s)\r\n", currentTime, currentTime - context->bsStart.tv_sec);
-            context->bsState = BOOTSTRAPPED;
+    if (context->bsState == BOOTSTRAP_CLIENT_HOLD_OFF) {
+        lwm2m_server_t * bootstrapServer = context->bootstrapServerList;
+        if (bootstrapServer != NULL) {
+            // get ClientHoldOffTime from bootstrapServer->lifetime
+            // (see objects.c => object_getServers())
+            if ((currentTime - context->bsStart.tv_sec) > bootstrapServer->lifetime) {
+                lwm2m_bootstrap(context);
+            }
         }
         else {
-
+            bootstrap_failed(context);
+        }
+    }
+    if (context->bsState == BOOTSTRAP_PENDING) {
+        if ((currentTime - context->bsStart.tv_sec) > timeout->tv_sec) {
+            // Time out and no error => bootstrap OK
+            LOG("\r\n[BOOTSTRAP] Bootstrapped at: %u (difftime: %u s)\r\n",
+                    currentTime, currentTime - context->bsStart.tv_sec);
+            context->bsState = BOOTSTRAPPED;
+            delete_transaction_list(context);
+            delete_server_list(context);
+            object_getServers(context);
+            // during next step, lwm2m_update_registrations will connect the client to DM server
         }
     }
 }

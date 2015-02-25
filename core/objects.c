@@ -569,6 +569,7 @@ int object_getServers(lwm2m_context_t * contextP)
                 lwm2m_tlv_free(4, tlvP);
                 return -1;
             }
+            // lifetime of a bootstrap server is set to ClientHoldOffTime
             targetP->lifetime = value;
 
             contextP->bootstrapServerList = (lwm2m_server_t*)LWM2M_LIST_ADD(contextP->bootstrapServerList, targetP);

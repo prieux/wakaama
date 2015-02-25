@@ -314,10 +314,23 @@ static uint8_t prv_security_write(uint16_t instanceId,
         break;
 
         case LWM2M_SECURITY_HOLD_OFF_ID:
-            // Let just ignore this
-            result = COAP_204_CHANGED;
-            break;
+        {
+            int64_t value;
 
+            if (1 == lwm2m_tlv_decode_int(dataArray + i, &value)) {
+                if (value >= 0 && value <= 0xFFFF) {
+                    targetP->clientHoldOffTime = value;
+                    result = COAP_204_CHANGED;
+                }
+                else {
+                    result = COAP_406_NOT_ACCEPTABLE;
+                }
+            }
+            else {
+                result = COAP_400_BAD_REQUEST;
+            }
+            break;
+        }
         default:
             return COAP_404_NOT_FOUND;
         }
@@ -415,9 +428,10 @@ static void prv_security_print(lwm2m_object_t * objectP)
     LOG("  /%u: Security object, instances:\r\n", objectP->objID);
     security_instance_t * instance = (security_instance_t *)objectP->instanceList;
     while (instance != NULL) {
-        LOG("    /%u/%u: instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u\r\n",
+        LOG("    /%u/%u: instanceId: %u, uri: %s, isBootstrap: %s, shortId: %u, clientHoldOffTime: %u\r\n",
                 objectP->objID, instance->instanceId,
-                instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false", instance->shortID);
+                instance->instanceId, instance->uri, instance->isBootstrap ? "true" : "false",
+                instance->shortID, instance->clientHoldOffTime);
         instance = (security_instance_t *)instance->next;
     }
 #endif

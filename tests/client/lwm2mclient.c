@@ -283,6 +283,7 @@ static void prv_output_servers(char * buffer,
             break;
         case STATE_REGISTERED:
             fprintf(stdout, "REGISTERED location: \"%s\"\r\n", targetP->location);
+            fprintf(stdout, "\tLifetime: %u s\r\n", targetP->lifetime);
             break;
         case STATE_REG_UPDATE_PENDING:
             fprintf(stdout, "REGISTRATION UPDATE PENDING\r\n");
@@ -382,7 +383,8 @@ static void prv_initiate_bootstrap(char * buffer,
                                    void * user_data)
 {
     lwm2m_context_t * lwm2mH = (lwm2m_context_t *)user_data;
-    if ((lwm2mH->bsState != BOOTSTRAP_INITIATED) && (lwm2mH->bsState != BOOTSTRAP_PENDING)) {
+    if ((lwm2mH->bsState != BOOTSTRAP_CLIENT_HOLD_OFF)
+            && (lwm2mH->bsState != BOOTSTRAP_PENDING)) {
         lwm2mH->bsState = BOOTSTRAP_REQUESTED;
     }
 }
@@ -417,28 +419,29 @@ static void prv_display_backup(char * buffer,
     }
 }
 
-static void prv_update_client_data(lwm2m_context_t * context) {
-    lwm2m_object_t * securityObject = NULL;
-    lwm2m_object_t * serverObject = NULL;
-    int i;
-
-    for (i = 0 ; i < context->numObject ; i++) {
-        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SECURITY_OBJECT_ID)) {
-            securityObject = context->objectList[i];
-            break;
-        }
-    }
-    ((client_data_t *)context->userData)->securityObjP = securityObject;
-
-    // find id of first server instance
-    for (i = 0 ; i < context->numObject ; i++) {
-        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SERVER_OBJECT_ID)) {
-            serverObject = context->objectList[i];
-            break;
-        }
-    }
-    ((client_data_t *)context->userData)->serverObject = serverObject;
-}
+//static void prv_update_client_data(lwm2m_context_t * context) {
+//    lwm2m_object_t * securityObject = NULL;
+//    lwm2m_object_t * serverObject = NULL;
+//    int i;
+//
+//    // find security object
+//    for (i = 0 ; i < context->numObject ; i++) {
+//        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SECURITY_OBJECT_ID)) {
+//            securityObject = context->objectList[i];
+//            break;
+//        }
+//    }
+//    ((client_data_t *)context->userData)->securityObjP = securityObject;
+//
+//    // find server object
+//    for (i = 0 ; i < context->numObject ; i++) {
+//        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SERVER_OBJECT_ID)) {
+//            serverObject = context->objectList[i];
+//            break;
+//        }
+//    }
+//    ((client_data_t *)context->userData)->serverObject = serverObject;
+//}
 
 #define OBJ_COUNT 7
 
@@ -663,7 +666,7 @@ int main(int argc, char *argv[])
         /*
          * This function does two things:
          *  - first it does the work needed by liblwm2m (eg. (re)sending some packets).
-         *  - Secondly it adjust the timeout value (default 60s) depending on the state of the transaction
+         *  - Secondly it adjusts the timeout value (default 60s) depending on the state of the transaction
          *    (eg. retransmission) and the time between the next operation
          */
         result = lwm2m_step(lwm2mH, &timeout);
@@ -672,12 +675,13 @@ int main(int argc, char *argv[])
             fprintf(stderr, "lwm2m_step() failed: 0x%X\r\n", result);
             return -1;
         }
-        if (lwm2mH->bsState == BOOTSTRAPPED) {
-            lwm2mH->bsState = NOT_BOOTSTRAPPED;
-            prv_update_client_data(lwm2mH);
-            object_getServers(lwm2mH);
-            lwm2m_update_registrations(lwm2mH, 0, &timeout);
-        }
+//        if (lwm2mH->bsState == BOOTSTRAPPED) {
+//            lwm2mH->bsState = NOT_BOOTSTRAPPED;
+//            //prv_update_client_data(lwm2mH);
+//            delete_server_list(lwm2mH);
+//            object_getServers(lwm2mH);
+//            //lwm2m_update_registrations(lwm2mH, 0, &timeout);
+//        }
 
         /*
          * This part will set up an interruption until an event happen on SDTIN or the socket until "tv" timed out (set

@@ -127,11 +127,11 @@ void delete_server_list(lwm2m_context_t * context) {
         lwm2m_server_t * server;
         server = context->serverList;
         context->serverList = context->serverList->next;
-        //registration_deregister(context, server);
         if (NULL != server->location) {
             lwm2m_free(server->location);
         }
         lwm2m_free(server);
+        server = NULL;
     }
     lwm2m_free(context->serverList);
     context->serverList = NULL;
@@ -174,6 +174,16 @@ void delete_observed_list(lwm2m_context_t * contextP) {
 }
 #endif
 
+void delete_transaction_list(lwm2m_context_t * context) {
+    while (NULL != context->transactionList) {
+        lwm2m_transaction_t * transaction;
+
+        transaction = context->transactionList;
+        context->transactionList = context->transactionList->next;
+        transaction_free(transaction);
+    }
+}
+
 void lwm2m_close(lwm2m_context_t * contextP)
 {
     int i;
@@ -206,16 +216,7 @@ void lwm2m_close(lwm2m_context_t * contextP)
     }
 #endif
 
-    while (NULL != contextP->transactionList)
-    {
-        lwm2m_transaction_t * transacP;
-
-        transacP = contextP->transactionList;
-        contextP->transactionList = contextP->transactionList->next;
-
-        transaction_free(transacP);
-    }
-
+    delete_transaction_list(contextP);
     lwm2m_free(contextP);
 }
 
@@ -310,8 +311,8 @@ void lwm2m_restore_objects(lwm2m_context_t * context)
     uint16_t i;
     lwm2m_object_t * objectList[context->numObjectBackup];
 
-    delete_server_list(context);
-    delete_bootstrap_server_list(context);
+//    delete_server_list(context);
+//    delete_bootstrap_server_list(context);
 
     /*
      * Delete current content of objects 0 (security) and 1 (server)
@@ -378,11 +379,10 @@ int lwm2m_step(lwm2m_context_t * contextP,
         transacP = nextP;
     }
 #ifdef LWM2M_CLIENT_MODE
-    if (contextP->bsState != BOOTSTRAP_PENDING) {
+    if ((contextP->bsState != BOOTSTRAP_CLIENT_HOLD_OFF) && (contextP->bsState != BOOTSTRAP_PENDING)) {
         lwm2m_update_registrations(contextP, currentTime.tv_sec, timeoutP);
     }
     lwm2m_update_bootstrap_state(contextP, currentTime.tv_sec, timeoutP);
-//    LOG(".");
 #endif
 
 #ifdef LWM2M_SERVER_MODE

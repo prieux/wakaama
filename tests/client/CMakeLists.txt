@@ -4,7 +4,7 @@ project (lwm2mclient)
 
 SET(LIBLWM2M_DIR ${PROJECT_SOURCE_DIR}/../../core)
 
-SET(CMAKE_C_FLAGS "-g")
+#SET(CMAKE_C_FLAGS "-g")
 
 add_definitions(-DLWM2M_CLIENT_MODE -DWITH_LOGS)
 

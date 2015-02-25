@@ -139,6 +139,7 @@ static void prv_handleRegistrationReply(lwm2m_transaction_t * transacP,
         {
             targetP->status = STATE_REG_FAILED;
             targetP->mid = 0;
+            LOG("    => Registration FAILED\r\n");
         }
         else if (packet->mid == targetP->mid
               && packet->type == COAP_TYPE_ACK
@@ -156,11 +157,13 @@ static void prv_handleRegistrationReply(lwm2m_transaction_t * transacP,
                 {
                     targetP->registration = tv.tv_sec;
                 }
+                LOG("    => REGISTERED\r\n");
             }
             else if (packet->code == BAD_REQUEST_4_00)
             {
                 targetP->status = STATE_REG_FAILED;
                 targetP->mid = 0;
+                LOG("    => Registration FAILED\r\n");
             }
         }
     }
@@ -224,6 +227,7 @@ static int prv_register(lwm2m_context_t * contextP, lwm2m_server_t * server)
             server->mid = transaction->mID;
         }
     }
+    return NO_ERROR;
 }
 
 int lwm2m_start(lwm2m_context_t * contextP)
@@ -251,6 +255,7 @@ static void prv_handleRegistrationUpdateReply(lwm2m_transaction_t * transacP,
         {
             targetP->status = STATE_REG_FAILED;
             targetP->mid = 0;
+            LOG("    => Registration update FAILED\r\n");
         }
         else if (packet->mid == targetP->mid
               && packet->type == COAP_TYPE_ACK)
@@ -262,11 +267,13 @@ static void prv_handleRegistrationUpdateReply(lwm2m_transaction_t * transacP,
                     targetP->registration = tv.tv_sec;
                 }
                 targetP->status = STATE_REGISTERED;
+                LOG("    => REGISTERED\r\n");
             }
             else if (packet->code == BAD_REQUEST_4_00)
             {
                 targetP->status = STATE_REG_FAILED;
                 targetP->mid = 0;
+                LOG("    => Registration update FAILED\r\n");
             }
         }
     }
@@ -338,6 +345,7 @@ int lwm2m_update_registrations(lwm2m_context_t * contextP,
             case STATE_REGISTERED:
                 if (targetP->registration + targetP->lifetime - timeoutP->tv_sec <= currentTime)
                 {
+                    LOG("Updating registration...\r\n");
                     prv_update_registration(contextP, targetP);
                 }
                 break;
@@ -353,6 +361,7 @@ int lwm2m_update_registrations(lwm2m_context_t * contextP,
             case STATE_DEREG_PENDING:
                 break;
             case STATE_REG_FAILED:
+                contextP->bsState = BOOTSTRAP_REQUESTED;
                 break;
         }
         targetP = targetP->next;
@@ -367,33 +376,31 @@ static void prv_handleDeregistrationReply(lwm2m_transaction_t * transacP,
     coap_packet_t * packet = (coap_packet_t *)message;
 
     targetP = (lwm2m_server_t *)(transacP->peerP);
-
-    switch(targetP->status)
-    {
-    case STATE_DEREG_PENDING:
-    {
-        if (packet == NULL)
-        {
-            targetP->status = STATE_DEREGISTERED;
-            targetP->mid = 0;
-        }
-        else if (packet->mid == targetP->mid
-              && packet->type == COAP_TYPE_ACK)
-        {
-            if (packet->code == DELETED_2_02)
-            {
-                targetP->status = STATE_DEREGISTERED;
-            }
-            else if (packet->code == BAD_REQUEST_4_00)
+    if (NULL != targetP) {
+        switch(targetP->status) {
+        case STATE_DEREG_PENDING:
+            if (packet == NULL)
             {
                 targetP->status = STATE_DEREGISTERED;
                 targetP->mid = 0;
             }
+            else if (packet->mid == targetP->mid
+                  && packet->type == COAP_TYPE_ACK)
+            {
+                if (packet->code == DELETED_2_02)
+                {
+                    targetP->status = STATE_DEREGISTERED;
+                }
+                else if (packet->code == BAD_REQUEST_4_00)
+                {
+                    targetP->status = STATE_DEREGISTERED;
+                    targetP->mid = 0;
+                }
+            }
+            break;
+        default:
+            break;
         }
-    }
-    break;
-    default:
-        break;
     }
 }
 
