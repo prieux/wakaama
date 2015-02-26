@@ -311,9 +311,6 @@ void lwm2m_restore_objects(lwm2m_context_t * context)
     uint16_t i;
     lwm2m_object_t * objectList[context->numObjectBackup];
 
-//    delete_server_list(context);
-//    delete_bootstrap_server_list(context);
-
     /*
      * Delete current content of objects 0 (security) and 1 (server)
      */

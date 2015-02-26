@@ -207,7 +207,6 @@ static void * prv_connect_server(uint16_t serverID, void * userData)
     else {
         goto exit;
     }
-
     portStr = strchr(host, ':');
     if (portStr == NULL) goto exit;
     // split strings
@@ -418,30 +417,6 @@ static void prv_display_backup(char * buffer,
         }
     }
 }
-
-//static void prv_update_client_data(lwm2m_context_t * context) {
-//    lwm2m_object_t * securityObject = NULL;
-//    lwm2m_object_t * serverObject = NULL;
-//    int i;
-//
-//    // find security object
-//    for (i = 0 ; i < context->numObject ; i++) {
-//        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SECURITY_OBJECT_ID)) {
-//            securityObject = context->objectList[i];
-//            break;
-//        }
-//    }
-//    ((client_data_t *)context->userData)->securityObjP = securityObject;
-//
-//    // find server object
-//    for (i = 0 ; i < context->numObject ; i++) {
-//        if ((NULL != context->objectList[i]) && (context->objectList[i]->objID == LWM2M_SERVER_OBJECT_ID)) {
-//            serverObject = context->objectList[i];
-//            break;
-//        }
-//    }
-//    ((client_data_t *)context->userData)->serverObject = serverObject;
-//}
 
 #define OBJ_COUNT 7
 
@@ -676,13 +651,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "lwm2m_step() failed: 0x%X\r\n", result);
             return -1;
         }
-//        if (lwm2mH->bsState == BOOTSTRAPPED) {
-//            lwm2mH->bsState = NOT_BOOTSTRAPPED;
-//            //prv_update_client_data(lwm2mH);
-//            delete_server_list(lwm2mH);
-//            object_getServers(lwm2mH);
-//            //lwm2m_update_registrations(lwm2mH, 0, &timeout);
-//        }
 
         /*
          * This part will set up an interruption until an event happen on SDTIN or the socket until "tv" timed out (set
